@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"qdrantoperator.io/operator/internal/qdrant"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -50,10 +51,20 @@ type QdrantClusterSpec struct {
 	Statefulsets []StatefulSet `json:"statefulsets,omitempty"`
 }
 
+type ShardInfo struct {
+	PeerId  uint64               `json:"peerId,omitempty"`
+	ShardId *uint32              `json:"shardId,omitempty"`
+	State   *qdrant.ReplicaState `json:"state,omitempty"`
+}
+
 // QdrantClusterStatus defines the observed state of QdrantCluster
 type QdrantClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	RaftLeaderPeerId    uint64                  `json:"raftLeader,omitempty"`
+	PeerIdsToNames      map[string]string       `json:"peerIds,omitempty"`
+	Collections         []string                `json:"collections,omitempty"`
+	ShardsPerCollection map[string][]*ShardInfo `json:"shards,omitempty"`
+	ShardsInProgress    map[string][]*ShardInfo `json:"shardsInProgress,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -44,6 +44,8 @@ spec:
                   to remove/update
                 items:
                   properties:
+                    ephemeralStorage:
+                      type: boolean
                     name:
                       type: string
                     priorityClassName:
@@ -66,6 +68,52 @@ spec:
             type: object
           status:
             description: QdrantClusterStatus defines the observed state of QdrantCluster
+            properties:
+              collections:
+                items:
+                  type: string
+                type: array
+              peerIds:
+                additionalProperties:
+                  type: string
+                type: object
+              raftLeader:
+                description: 'Important: Run "make" to regenerate code after modifying
+                  this file'
+                format: int64
+                type: integer
+              shards:
+                additionalProperties:
+                  items:
+                    properties:
+                      peerId:
+                        format: int64
+                        type: integer
+                      shardId:
+                        format: int32
+                        type: integer
+                      state:
+                        format: int32
+                        type: integer
+                    type: object
+                  type: array
+                type: object
+              shardsInProgress:
+                additionalProperties:
+                  items:
+                    properties:
+                      peerId:
+                        format: int64
+                        type: integer
+                      shardId:
+                        format: int32
+                        type: integer
+                      state:
+                        format: int32
+                        type: integer
+                    type: object
+                  type: array
+                type: object
             type: object
         type: object
     served: true

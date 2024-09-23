@@ -37,6 +37,7 @@ import (
 
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 	"qdrantoperator.io/operator/internal/controller"
+	"qdrantoperator.io/operator/internal/statushandler"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -152,6 +153,8 @@ func main() {
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
+
+	go statushandler.NewStatusHandler(mgr).Run()
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
