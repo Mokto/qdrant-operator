@@ -1,0 +1,23 @@
+# permissions for end users to view qdrantclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: qdrant-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: qdrantcluster-viewer-role
+rules:
+- apiGroups:
+  - qdrant.qdrantoperator.io
+  resources:
+  - qdrantclusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - qdrant.qdrantoperator.io
+  resources:
+  - qdrantclusters/status
+  verbs:
+  - get

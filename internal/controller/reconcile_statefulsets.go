@@ -1,0 +1,199 @@
+package controller
+
+import (
+	"context"
+
+	"github.com/go-logr/logr"
+	v1 "k8s.io/api/apps/v1"
+	v1core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
+
+	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
+)
+
+func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster, checksum string) error {
+
+	falseValue := false
+	trueValue := true
+	securityUser := int64(1000)
+	securityGroup := int64(2000)
+
+	log.Info("Deploying StatefulSets")
+	for _, statefulSetConfig := range obj.Spec.Statefulsets {
+		labels := map[string]string{
+			"cluster": obj.Name,
+			"name":    statefulSetConfig.Name,
+		}
+		podTemplate := v1core.PodTemplateSpec{
+			ObjectMeta: v1meta.ObjectMeta{Labels: labels, Annotations: map[string]string{"checksum": checksum}},
+			Spec: v1core.PodSpec{
+				InitContainers: []v1core.Container{{
+					Name:  "ensure-dir-ownership",
+					Image: "qdrant/qdrant:v1.11.4",
+					Command: []string{
+						"chown",
+						"-R",
+						"1000:3000",
+						"/qdrant/storage",
+						"/qdrant/snapshots",
+					},
+					VolumeMounts: []v1core.VolumeMount{{
+						MountPath: "/qdrant/storage",
+						Name:      "qdrant-storage",
+					}, {
+						MountPath: "/qdrant/snapshots",
+						Name:      "qdrant-snapshots",
+					}},
+				}},
+				Containers: []v1core.Container{{
+					Name:  "qdrant",
+					Image: "qdrant/qdrant:v1.11.4",
+					Command: []string{
+						"/bin/bash",
+						"-c",
+					},
+					Args: []string{
+						"./config/initialize.sh",
+					},
+					Env: []v1core.EnvVar{{
+						Name:  "QDRANT_INIT_FILE_PATH",
+						Value: "/qdrant/init/.qdrant-initialized",
+					}},
+					Lifecycle: &v1core.Lifecycle{
+						PreStop: &v1core.LifecycleHandler{
+							Exec: &v1core.ExecAction{
+								Command: []string{"sleep", "3"},
+							},
+						},
+					},
+					Ports: []v1core.ContainerPort{{
+						ContainerPort: 6333,
+						Name:          "http",
+						Protocol:      v1core.Protocol("TCP"),
+					}, {
+						ContainerPort: 6334,
+						Name:          "grpc",
+						Protocol:      v1core.Protocol("TCP"),
+					}, {
+						ContainerPort: 6335,
+						Name:          "p2p",
+						Protocol:      v1core.Protocol("TCP"),
+					}},
+					ReadinessProbe: &v1core.Probe{
+						FailureThreshold: 6,
+						ProbeHandler: v1core.ProbeHandler{HTTPGet: &v1core.HTTPGetAction{Path: "/readyz", Port: intstr.IntOrString{
+							IntVal: 6333,
+						}, Scheme: "HTTP"}},
+						InitialDelaySeconds: 5,
+						PeriodSeconds:       5,
+						SuccessThreshold:    1,
+						TimeoutSeconds:      1,
+					},
+					SecurityContext: &v1core.SecurityContext{
+						AllowPrivilegeEscalation: &falseValue,
+						Privileged:               &falseValue,
+						ReadOnlyRootFilesystem:   &trueValue,
+						RunAsUser:                &securityUser,
+						RunAsGroup:               &securityGroup,
+						RunAsNonRoot:             &trueValue,
+					},
+					VolumeMounts: []v1core.VolumeMount{{
+						MountPath: "/qdrant/storage",
+						Name:      "qdrant-storage",
+					}, {
+						MountPath: "/qdrant/config/initialize.sh",
+						Name:      "qdrant-config",
+						SubPath:   "initialize.sh",
+					}, {
+						MountPath: "/qdrant/config/production.yaml",
+						Name:      "qdrant-config",
+						SubPath:   "production.yaml",
+					}, {
+						MountPath: "/qdrant/snapshots",
+						Name:      "qdrant-snapshots",
+					}, {
+						MountPath: "/qdrant/init",
+						Name:      "qdrant-init",
+					}},
+				}},
+				PriorityClassName: statefulSetConfig.PriorityClassName,
+				Volumes: []v1core.Volume{{
+					Name: "qdrant-init",
+					VolumeSource: v1core.VolumeSource{
+						EmptyDir: &v1core.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "qdrant-snapshots",
+					VolumeSource: v1core.VolumeSource{
+						EmptyDir: &v1core.EmptyDirVolumeSource{},
+					},
+				}, {
+					Name: "qdrant-config",
+					VolumeSource: v1core.VolumeSource{
+						ConfigMap: &v1core.ConfigMapVolumeSource{
+							LocalObjectReference: v1core.LocalObjectReference{
+								Name: obj.Name,
+							},
+							DefaultMode: &[]int32{493}[0],
+						},
+					},
+				}},
+			},
+		}
+		statefulSet := &v1.StatefulSet{}
+		if err := r.Get(ctx, types.NamespacedName{
+			Name:      statefulSetConfig.Name,
+			Namespace: namespace,
+		}, statefulSet); err != nil {
+			statefulSet = &v1.StatefulSet{
+				ObjectMeta: v1meta.ObjectMeta{
+					Name:      statefulSetConfig.Name,
+					Namespace: namespace,
+					Labels:    labels,
+					OwnerReferences: []v1meta.OwnerReference{{
+						APIVersion: obj.APIVersion,
+						Kind:       obj.Kind,
+						Name:       obj.Name,
+						UID:        obj.UID,
+					}},
+				},
+				Spec: v1.StatefulSetSpec{
+					Replicas:            &statefulSetConfig.Replicas,
+					Selector:            &v1meta.LabelSelector{MatchLabels: labels},
+					PodManagementPolicy: v1.PodManagementPolicyType("Parallel"),
+					// PodManagementPolicy: v1.PodManagementPolicyType("OrderedReady"),
+					ServiceName: obj.Name + "-headless",
+
+					Template: podTemplate,
+					VolumeClaimTemplates: []v1core.PersistentVolumeClaim{{
+						ObjectMeta: v1meta.ObjectMeta{Name: "qdrant-storage"},
+						Spec: v1core.PersistentVolumeClaimSpec{
+							AccessModes:      []v1core.PersistentVolumeAccessMode{v1core.ReadWriteOnce},
+							StorageClassName: &statefulSetConfig.VolumeClaim.StorageClassName,
+							Resources: v1core.VolumeResourceRequirements{
+								Requests: v1core.ResourceList{
+									"storage": resource.MustParse(statefulSetConfig.VolumeClaim.Storage),
+								},
+							},
+						},
+					}},
+				},
+			}
+
+			if err := r.Client.Create(ctx, statefulSet); err != nil {
+				return err
+			}
+		} else {
+			statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
+			statefulSet.Spec.Template = podTemplate
+
+			if err := r.Client.Update(ctx, statefulSet); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
