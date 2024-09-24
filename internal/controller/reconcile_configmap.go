@@ -48,32 +48,25 @@ func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log lo
 		return "", err
 	}
 
-	objName := obj.Name
-
-	statefulSet := obj.Spec.Statefulsets[0]
-	// get first Stateful where EphemeralStorage is true
-	for _, s := range obj.Spec.Statefulsets {
-		if !s.EphemeralStorage {
-			statefulSet = s
-			break
-		}
-	}
-	firstStatefulSetName := statefulSet.Name
-
 	data := map[string]string{
-		"initialize.sh": `
-#!/bin/sh
-SET_INDEX=${HOSTNAME##*-}
-STATEFULSET_NAME=${HOSTNAME%-*}
-if [ "$SET_INDEX" = "0" -a "$STATEFULSET_NAME" = "` + firstStatefulSetName + `" ]; then
-echo "Starting first pod of the first statefulset"
-exec ./entrypoint.sh --uri 'http://'"$STATEFULSET_NAME"'-0.` + objName + `-headless:6335'
-else
-echo "Starting pod $SET_INDEX of statefulset $STATEFULSET_NAME. Connection to 'http://` + firstStatefulSetName + `-0.` + objName + `-headless:6335'"
-exec ./entrypoint.sh --bootstrap 'http://` + firstStatefulSetName + `-0.` + objName + `-headless:6335' --uri 'http://'"$STATEFULSET_NAME"'-'"$SET_INDEX"'.` + objName + `-headless:6335'
-fi`,
 		"production.yaml": string(bytes),
 	}
+	hash := hashMap(data)
+
+	config := `
+	#!/bin/sh
+	exec ./entrypoint.sh --uri 'http://'"$HOSTNAME"'.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335'
+	`
+
+	leader := obj.Status.Peers.GetLeader()
+	if leader != nil {
+		config = `
+#!/bin/sh
+exec ./entrypoint.sh --bootstrap 'http://` + leader.DNS + `:6335' --uri 'http://'"$HOSTNAME"'.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335'
+`
+	}
+
+	data["initialize.sh"] = config
 
 	configmap := &v1core.ConfigMap{
 		ObjectMeta: v1meta.ObjectMeta{
@@ -109,5 +102,5 @@ fi`,
 			return "", err
 		}
 	}
-	return hashMap(data), nil
+	return hash, nil
 }

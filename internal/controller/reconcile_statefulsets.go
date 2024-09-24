@@ -21,8 +21,17 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 	securityUser := int64(1000)
 	securityGroup := int64(2000)
 
+	leader := obj.Status.Peers.GetLeader()
 	log.Info("Deploying StatefulSets")
+	indexStatefulSet := 0
 	for _, statefulSetConfig := range obj.Spec.Statefulsets {
+		if indexStatefulSet > 0 && leader == nil {
+			obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &statefulSetConfig.Replicas
+			if err := r.Client.Update(ctx, obj); err != nil {
+				return err
+			}
+			continue
+		}
 		labels := map[string]string{
 			"cluster": obj.Name,
 			"name":    statefulSetConfig.Name,
@@ -148,6 +157,11 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			Name:      statefulSetConfig.Name,
 			Namespace: obj.Namespace,
 		}, statefulSet); err != nil {
+			replicas := &statefulSetConfig.Replicas
+			if leader == nil {
+				replicas = new(int32)
+				*replicas = 1
+			}
 			statefulSet = &v1.StatefulSet{
 				ObjectMeta: v1meta.ObjectMeta{
 					Name:      statefulSetConfig.Name,
@@ -165,11 +179,11 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 						WhenDeleted: "Delete",
 						WhenScaled:  "Delete",
 					},
-					Replicas:            &statefulSetConfig.Replicas,
+					Replicas:            replicas,
 					Selector:            &v1meta.LabelSelector{MatchLabels: labels},
 					PodManagementPolicy: v1.PodManagementPolicyType("Parallel"),
 					// PodManagementPolicy: v1.PodManagementPolicyType("OrderedReady"),
-					ServiceName: obj.GetServiceName(),
+					ServiceName: obj.GetHeadlessServiceName(),
 
 					Template: podTemplate,
 					VolumeClaimTemplates: []v1core.PersistentVolumeClaim{{
@@ -198,7 +212,6 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					newReplicas := *statefulSet.Spec.Replicas - 1
 					statefulSet.Spec.Replicas = &newReplicas
 					obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &newReplicas
-
 					if err := r.Client.Update(ctx, obj); err != nil {
 						return err
 					}
@@ -207,12 +220,21 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
 				}
 			}
+			if leader == nil {
+				replicas := int32(1)
+				statefulSet.Spec.Replicas = &replicas
+				obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &statefulSetConfig.Replicas
+				if err := r.Client.Update(ctx, obj); err != nil {
+					return err
+				}
+			}
 			statefulSet.Spec.Template = podTemplate
 
 			if err := r.Client.Update(ctx, statefulSet); err != nil {
 				return err
 			}
 		}
+		indexStatefulSet++
 	}
 
 	return nil

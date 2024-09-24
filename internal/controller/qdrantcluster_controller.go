@@ -95,6 +95,9 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	if obj.Status.Peers.GetLeader() == nil {
+		return ctrl.Result{}, nil
+	}
 	err = r.clearEmptyNodes(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to clear empty nodes")

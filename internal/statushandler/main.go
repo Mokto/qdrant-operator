@@ -73,8 +73,8 @@ func (s *StatusHandler) Run() {
 			leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
 			for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
 				serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
-				podName := strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1)
-				dns := serviceName + "." + cluster.Namespace
+				podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
+				dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
 
 				_, err := http.Get("http://" + dns + ":6333/readyz")
 				isReady := err == nil
