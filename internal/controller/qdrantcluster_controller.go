@@ -104,10 +104,18 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	err = r.moveShards(ctx, log, obj)
+	hasDuplicatedShards, err := r.replicateMissingShards(ctx, log, obj)
 	if err != nil {
-		log.Error(err, "unable to trigger moving shards")
+		log.Error(err, "unable to duplicate shards")
 		return ctrl.Result{}, err
+	}
+
+	if !hasDuplicatedShards {
+		err = r.moveShards(ctx, log, obj)
+		if err != nil {
+			log.Error(err, "unable to trigger moving shards")
+			return ctrl.Result{}, err
+		}
 	}
 
 	return ctrl.Result{}, nil

@@ -112,11 +112,12 @@ spec:
                       type: string
                   type: object
                 type: object
-              desiredReplicasPerStatefulset:
-                additionalProperties:
-                  format: int32
-                  type: integer
-                type: object
+              cordonedPeerIds:
+                description: When the cluster is draining, no new writes are allowed
+                  and shards are moved out of the node.
+                items:
+                  type: string
+                type: array
               peers:
                 additionalProperties:
                   properties:

@@ -41,7 +41,7 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 
 func (s *StatusHandler) Run() {
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(3 * time.Second)
 
 		// start := time.Now()
 		clusters := &qdrantv1alpha1.QdrantClusterList{}
@@ -51,8 +51,6 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
-			// cluster.Status
-
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			// Getting peers from main service endpoint
@@ -185,8 +183,15 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 			return cmp.Compare(*a.ShardId, *b.ShardId)
 		})
 	}
-	for _, shard := range clusterInfoResponse.ShardTransfers {
-		fmt.Println("SHARD TRANSFER", shard)
+	if len(clusterInfoResponse.ShardTransfers) > 0 {
+
+		fmt.Println("--------------------")
+		fmt.Println("--------------------")
+		fmt.Println("--------------------")
+		for _, shard := range clusterInfoResponse.ShardTransfers {
+			fmt.Println("SHARD TRANSFER", shard)
+		}
+		fmt.Println("--------------------")
 	}
 	return shards, nil, nil
 }

@@ -37,10 +37,20 @@ type QdrantClusterSpec struct {
 // QdrantClusterStatus defines the observed state of QdrantCluster
 type QdrantClusterStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
-	Peers                         Peers             `json:"peers,omitempty"`
-	Collections                   Collections       `json:"collections,omitempty"`
-	DesiredReplicasPerStatefulSet map[string]*int32 `json:"desiredReplicasPerStatefulset,omitempty"`
+	Peers       Peers       `json:"peers,omitempty"`
+	Collections Collections `json:"collections,omitempty"`
+	// When the cluster is draining, no new writes are allowed and shards are moved out of the node.
+	CordonedPeerIds []string `json:"cordonedPeerIds,omitempty"`
+	// DesiredReplicasPerStatefulSet map[string]*int32 `json:"desiredReplicasPerStatefulset,omitempty"`
 }
+
+// func (status *QdrantClusterStatus) SetDesiredReplicasPerStatefulSet(statefulsetName string, replicas int32) *Peer {
+// 	if status.DesiredReplicasPerStatefulSet == nil {
+// 		status.DesiredReplicasPerStatefulSet = map[string]*int32{}
+// 	}
+// 	status.DesiredReplicasPerStatefulSet[statefulsetName] = &replicas
+// 	return nil
+// }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status

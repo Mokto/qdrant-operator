@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/apps/v1"
@@ -12,9 +13,12 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster, checksum string) error {
+
+	cordonedPeerIds := []string{}
 
 	falseValue := false
 	trueValue := true
@@ -26,10 +30,10 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 	indexStatefulSet := 0
 	for _, statefulSetConfig := range obj.Spec.Statefulsets {
 		if indexStatefulSet > 0 && leader == nil {
-			obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &statefulSetConfig.Replicas
-			if err := r.Client.Update(ctx, obj); err != nil {
-				return err
-			}
+			// obj.Status.SetDesiredReplicasPerStatefulSet(statefulSetConfig.Name, statefulSetConfig.Replicas)
+			// if err := r.Client.Update(ctx, obj); err != nil {
+			// 	return err
+			// }
 			continue
 		}
 		labels := map[string]string{
@@ -205,27 +209,34 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 				return err
 			}
 		} else {
-			// if the number decreases by more than 1, we need to scale down slowly
-			if statefulSetConfig.Replicas != *statefulSet.Spec.Replicas {
-				if statefulSetConfig.Replicas < *statefulSet.Spec.Replicas-1 {
-					log.Info("We should scale down slowly")
-					newReplicas := *statefulSet.Spec.Replicas - 1
-					statefulSet.Spec.Replicas = &newReplicas
-					obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &newReplicas
-					if err := r.Client.Update(ctx, obj); err != nil {
-						return err
-					}
-				} else {
-					log.Info("We can scale immediately")
-					statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
-				}
-			}
+
 			if leader == nil {
 				replicas := int32(1)
 				statefulSet.Spec.Replicas = &replicas
-				obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &statefulSetConfig.Replicas
-				if err := r.Client.Update(ctx, obj); err != nil {
-					return err
+			} else {
+				// if the number decreases, we need to scale down slowly & cordon first
+				if statefulSetConfig.Replicas < *statefulSet.Spec.Replicas {
+					peerId := obj.Status.Peers.FindPeerId(fmt.Sprintf("%s-%d", statefulSetConfig.Name, *statefulSet.Spec.Replicas-1))
+					isPeerEmpty := true
+					for _, collection := range obj.Status.Collections {
+						for peerIdWithShards := range collection.Shards {
+							if peerIdWithShards == peerId {
+								isPeerEmpty = false
+								break
+							}
+						}
+					}
+					if isPeerEmpty {
+						wantedReplicas := *statefulSet.Spec.Replicas - 1
+						statefulSet.Spec.Replicas = &wantedReplicas
+					} else {
+						log.Info("We should scale down slowly just by marking the last node for deletion")
+						cordonedPeerIds = append(cordonedPeerIds, peerId)
+					}
+
+				} else {
+					log.Info("We can scale immediately")
+					statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
 				}
 			}
 			statefulSet.Spec.Template = podTemplate
@@ -235,6 +246,14 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			}
 		}
 		indexStatefulSet++
+	}
+
+	patch := client.MergeFrom(obj.DeepCopy())
+	obj.Status.CordonedPeerIds = cordonedPeerIds
+
+	err := r.Client.Status().Patch(ctx, obj, patch)
+	if err != nil {
+		log.Error(err, "unable to update QdrantCluster status")
 	}
 
 	return nil

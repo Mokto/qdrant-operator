@@ -263,21 +263,10 @@ func (in *QdrantClusterStatus) DeepCopyInto(out *QdrantClusterStatus) {
 			(*out)[key] = outVal
 		}
 	}
-	if in.DesiredReplicasPerStatefulSet != nil {
-		in, out := &in.DesiredReplicasPerStatefulSet, &out.DesiredReplicasPerStatefulSet
-		*out = make(map[string]*int32, len(*in))
-		for key, val := range *in {
-			var outVal *int32
-			if val == nil {
-				(*out)[key] = nil
-			} else {
-				inVal := (*in)[key]
-				in, out := &inVal, &outVal
-				*out = new(int32)
-				**out = **in
-			}
-			(*out)[key] = outVal
-		}
+	if in.CordonedPeerIds != nil {
+		in, out := &in.CordonedPeerIds, &out.CordonedPeerIds
+		*out = make([]string, len(*in))
+		copy(*out, *in)
 	}
 }
 

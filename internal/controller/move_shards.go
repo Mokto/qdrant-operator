@@ -16,11 +16,14 @@ import (
 )
 
 func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+
 	for collectionName, collection := range obj.Status.Collections {
 		if collection.Status != qdrant.CollectionStatus_Green.String() {
 			log.Info(collectionName + " is not ready to be optimized. Skipping.")
 			continue
 		}
+
+		isCordoning := len(obj.Status.CordonedPeerIds) > 0
 
 		totalShardCount := collection.ShardNumber * collection.ReplicationFactor
 		optimalShardsPerHost := float64(totalShardCount) / float64(len(obj.Status.Peers))
@@ -36,6 +39,16 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 				abovePeerIds = append(abovePeerIds, peerId)
 			} else if len(shards) < int(math.Floor(optimalShardsPerHost)) {
 				belowPeerIds = append(belowPeerIds, peerId)
+			}
+		}
+
+		// If we are cordoning, we need to move shards from the cordoned peer to the best candidate
+		if isCordoning {
+			abovePeerIds = []string{obj.Status.CordonedPeerIds[0]}
+			for peerId := range obj.Status.Peers {
+				if !slices.Contains(obj.Status.CordonedPeerIds, peerId) {
+					belowPeerIds = append(belowPeerIds, peerId)
+				}
 			}
 		}
 
@@ -58,7 +71,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 				for shardNumber := range collection.ShardNumber {
 					shardsFromId := collection.Shards.GetShardsPerId(shardNumber)
 					// If the shard is on the above peer but not on the below peer, we can move it!
-					if shardsFromId.AllActive() && shardsFromId.HasShardFromPeer(abovePeerId) && !shardsFromId.HasShardFromPeer(belowPeerId) && obj.Status.Peers[belowPeerId].IsReady && obj.Status.Peers[abovePeerId].IsReady {
+					if shardsFromId.AllActive() && shardsFromId.HasShardFromPeer(abovePeerId) && !shardsFromId.HasShardFromPeer(belowPeerId) && obj.Status.Peers[belowPeerId].IsReady && obj.Status.Peers[abovePeerId].IsReady && !slices.Contains(obj.Status.CordonedPeerIds, belowPeerId) {
 						foundShardNumber = &shardNumber
 						from = &abovePeerId
 						to = &belowPeerId
@@ -72,13 +85,14 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 		}
 
 		if foundShardNumber != nil {
-			log.Info(fmt.Sprintf("We got a good candidate! Shard number: %d from %s to %s", *foundShardNumber, *from, *to))
+			log.Info(fmt.Sprintf("Moving shard number: %d from %s to %s", *foundShardNumber, *from, *to))
 
 			conn, err := grpc.NewClient(obj.Status.Peers[*to].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				log.Error(err, "grpc.NewClient")
-				return nil
+				return err
 			}
+			defer conn.Close()
 
 			fromPeerId, err := strconv.ParseUint(*from, 10, 64)
 			if err != nil {
@@ -102,7 +116,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 			})
 			if err != nil {
 				log.Error(err, "unable to move shards")
-				return nil
+				return err
 			}
 			log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
 		}

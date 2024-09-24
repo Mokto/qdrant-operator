@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -10,16 +11,16 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) clearEmptyNodes(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) clearEmptyNodes(_ context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	statefulsetsNumberOfReplicas := map[string]int32{}
 	for _, statefulset := range obj.Spec.Statefulsets {
 		statefulsetsNumberOfReplicas[statefulset.Name] = statefulset.Replicas
-
-		if obj.Status.DesiredReplicasPerStatefulSet[statefulset.Name] != nil {
-			statefulsetsNumberOfReplicas[statefulset.Name] = *obj.Status.DesiredReplicasPerStatefulSet[statefulset.Name]
-		}
 	}
+
 	for peerId, peer := range obj.Status.Peers {
+		if slices.Contains(obj.Status.CordonedPeerIds, peerId) {
+			continue
+		}
 		statefulsetsNumberOfReplicas := statefulsetsNumberOfReplicas[peer.StatefulSetName]
 		currentReplicaNumberParsed, err := strconv.ParseInt(strings.Replace(peer.PodName, peer.StatefulSetName+"-", "", 1), 10, 64)
 		if err != nil {

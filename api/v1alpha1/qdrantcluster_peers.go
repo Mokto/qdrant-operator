@@ -19,3 +19,12 @@ func (peers *Peers) GetLeader() *Peer {
 	}
 	return nil
 }
+
+func (peers *Peers) FindPeerId(podName string) string {
+	for peerId, peer := range *peers {
+		if peer.PodName == podName {
+			return peerId
+		}
+	}
+	return ""
+}
