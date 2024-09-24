@@ -37,7 +37,7 @@ var defaultConfigObj = map[string]interface{}{
 	},
 }
 
-func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster) (string, error) {
+func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (string, error) {
 
 	falseValue := false
 
@@ -78,7 +78,7 @@ fi`,
 	configmap := &v1core.ConfigMap{
 		ObjectMeta: v1meta.ObjectMeta{
 			Name:      obj.Name,
-			Namespace: namespace,
+			Namespace: obj.Namespace,
 			OwnerReferences: []v1meta.OwnerReference{{
 				APIVersion: obj.APIVersion,
 				Kind:       obj.Kind,
@@ -96,7 +96,7 @@ fi`,
 	log.Info("Deploying Configmap")
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      obj.Name,
-		Namespace: namespace,
+		Namespace: obj.Namespace,
 	}, existingConfigmap); err != nil {
 
 		if err := r.Client.Create(ctx, configmap); err != nil {

@@ -14,7 +14,7 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster, checksum string) error {
+func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster, checksum string) error {
 
 	falseValue := false
 	trueValue := true
@@ -146,12 +146,12 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 		statefulSet := &v1.StatefulSet{}
 		if err := r.Get(ctx, types.NamespacedName{
 			Name:      statefulSetConfig.Name,
-			Namespace: namespace,
+			Namespace: obj.Namespace,
 		}, statefulSet); err != nil {
 			statefulSet = &v1.StatefulSet{
 				ObjectMeta: v1meta.ObjectMeta{
 					Name:      statefulSetConfig.Name,
-					Namespace: namespace,
+					Namespace: obj.Namespace,
 					Labels:    labels,
 					OwnerReferences: []v1meta.OwnerReference{{
 						APIVersion: obj.APIVersion,
@@ -161,11 +161,15 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					}},
 				},
 				Spec: v1.StatefulSetSpec{
+					PersistentVolumeClaimRetentionPolicy: &v1.StatefulSetPersistentVolumeClaimRetentionPolicy{
+						WhenDeleted: "Delete",
+						WhenScaled:  "Delete",
+					},
 					Replicas:            &statefulSetConfig.Replicas,
 					Selector:            &v1meta.LabelSelector{MatchLabels: labels},
 					PodManagementPolicy: v1.PodManagementPolicyType("Parallel"),
 					// PodManagementPolicy: v1.PodManagementPolicyType("OrderedReady"),
-					ServiceName: obj.Name + "-headless",
+					ServiceName: obj.GetServiceName(),
 
 					Template: podTemplate,
 					VolumeClaimTemplates: []v1core.PersistentVolumeClaim{{
@@ -187,7 +191,22 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 				return err
 			}
 		} else {
-			statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
+			// if the number decreases by more than 1, we need to scale down slowly
+			if statefulSetConfig.Replicas != *statefulSet.Spec.Replicas {
+				if statefulSetConfig.Replicas < *statefulSet.Spec.Replicas-1 {
+					log.Info("We should scale down slowly")
+					newReplicas := *statefulSet.Spec.Replicas - 1
+					statefulSet.Spec.Replicas = &newReplicas
+					obj.Status.DesiredReplicasPerStatefulSet[statefulSetConfig.Name] = &newReplicas
+
+					if err := r.Client.Update(ctx, obj); err != nil {
+						return err
+					}
+				} else {
+					log.Info("We can scale immediately")
+					statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
+				}
+			}
 			statefulSet.Spec.Template = podTemplate
 
 			if err := r.Client.Update(ctx, statefulSet); err != nil {
@@ -195,5 +214,6 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			}
 		}
 	}
+
 	return nil
 }

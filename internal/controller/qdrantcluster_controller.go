@@ -65,33 +65,45 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	checksum, err := r.reconcileConfigmap(ctx, log, obj.Namespace, obj)
+	checksum, err := r.reconcileConfigmap(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update ConfigMap")
 		return ctrl.Result{}, err
 	}
 
-	err = r.reconcileService(ctx, log, obj.Namespace, obj)
+	err = r.reconcileService(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update Service")
 		return ctrl.Result{}, err
 	}
 
-	err = r.reconcileHeadlessService(ctx, log, obj.Namespace, obj)
+	err = r.reconcileHeadlessService(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update headless Service")
 		return ctrl.Result{}, err
 	}
 
-	err = r.reconcilePodDisruptionBudget(ctx, log, obj.Namespace, obj)
+	err = r.reconcilePodDisruptionBudget(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update PodDisruptionBudget")
 		return ctrl.Result{}, err
 	}
 
-	err = r.reconcileStatefulsets(ctx, log, obj.Namespace, obj, checksum)
+	err = r.reconcileStatefulsets(ctx, log, obj, checksum)
 	if err != nil {
 		log.Error(err, "unable to fetch update StatefulSets")
+		return ctrl.Result{}, err
+	}
+
+	err = r.clearEmptyNodes(ctx, log, obj)
+	if err != nil {
+		log.Error(err, "unable to clear empty nodes")
+		return ctrl.Result{}, err
+	}
+
+	err = r.moveShards(ctx, log, obj)
+	if err != nil {
+		log.Error(err, "unable to trigger moving shards")
 		return ctrl.Result{}, err
 	}
 

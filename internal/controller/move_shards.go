@@ -1,0 +1,112 @@
+package controller
+
+import (
+	"cmp"
+	"context"
+	"fmt"
+	"math"
+	"slices"
+	"strconv"
+
+	"github.com/go-logr/logr"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
+	"qdrantoperator.io/operator/internal/qdrant"
+)
+
+func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+	for collectionName, collection := range obj.Status.Collections {
+		if collection.Status != qdrant.CollectionStatus_Green.String() {
+			log.Info(collectionName + " is not ready to be optimized. Skipping.")
+			continue
+		}
+
+		totalShardCount := collection.ShardNumber * collection.ReplicationFactor
+		optimalShardsPerHost := float64(totalShardCount) / float64(len(obj.Status.Peers))
+
+		// Getting a list of peers that don't have an optimal number of shards
+		abovePeerIds := []string{}
+		belowPeerIds := []string{}
+		shardsPerPeer := map[string]int{}
+		for peerId := range obj.Status.Peers {
+			shards := collection.Shards[peerId]
+			shardsPerPeer[peerId] = len(shards)
+			if len(shards) > int(math.Ceil(optimalShardsPerHost)) {
+				abovePeerIds = append(abovePeerIds, peerId)
+			} else if len(shards) < int(math.Floor(optimalShardsPerHost)) {
+				belowPeerIds = append(belowPeerIds, peerId)
+			}
+		}
+
+		if len(abovePeerIds) == 0 || len(belowPeerIds) == 0 {
+			continue
+		}
+		slices.SortFunc(belowPeerIds, func(a, b string) int {
+			return cmp.Compare(shardsPerPeer[b], shardsPerPeer[a])
+		})
+		slices.SortFunc(abovePeerIds, func(a, b string) int {
+			return cmp.Compare(shardsPerPeer[a], shardsPerPeer[b])
+		})
+		// Findind the best pair of peers to move shards between
+		var foundShardNumber *uint32
+		var from *string
+		var to *string
+	out:
+		for _, abovePeerId := range abovePeerIds {
+			for _, belowPeerId := range belowPeerIds {
+				for shardNumber := range collection.ShardNumber {
+					shardsFromId := collection.Shards.GetShardsPerId(shardNumber)
+					// If the shard is on the above peer but not on the below peer, we can move it!
+					if shardsFromId.AllActive() && shardsFromId.HasShardFromPeer(abovePeerId) && !shardsFromId.HasShardFromPeer(belowPeerId) && obj.Status.Peers[belowPeerId].IsReady && obj.Status.Peers[abovePeerId].IsReady {
+						foundShardNumber = &shardNumber
+						from = &abovePeerId
+						to = &belowPeerId
+						break
+					}
+				}
+				if foundShardNumber != nil {
+					break out
+				}
+			}
+		}
+
+		if foundShardNumber != nil {
+			log.Info(fmt.Sprintf("We got a good candidate! Shard number: %d from %s to %s", *foundShardNumber, *from, *to))
+
+			conn, err := grpc.NewClient(obj.Status.Peers[*to].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				log.Error(err, "grpc.NewClient")
+				return nil
+			}
+
+			fromPeerId, err := strconv.ParseUint(*from, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+			toPeerId, err := strconv.ParseUint(*to, 10, 64)
+			if err != nil {
+				panic(err)
+			}
+
+			client := qdrant.NewCollectionsClient(conn)
+			_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+				CollectionName: collectionName,
+				Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
+					MoveShard: &qdrant.MoveShard{
+						ShardId:    *foundShardNumber,
+						FromPeerId: fromPeerId,
+						ToPeerId:   toPeerId,
+					},
+				},
+			})
+			if err != nil {
+				log.Error(err, "unable to move shards")
+				return nil
+			}
+			log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
+		}
+
+	}
+	return nil
+}

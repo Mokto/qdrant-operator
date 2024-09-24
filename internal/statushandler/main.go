@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
-	pb "qdrantoperator.io/operator/internal/qdrant"
+	"qdrantoperator.io/operator/internal/qdrant"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -42,7 +42,8 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 func (s *StatusHandler) Run() {
 	for {
 		time.Sleep(5 * time.Second)
-		start := time.Now()
+
+		// start := time.Now()
 		clusters := &qdrantv1alpha1.QdrantClusterList{}
 		err := s.manager.GetClient().List(s.ctx, clusters)
 		if err != nil {
@@ -50,83 +51,80 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
+			// cluster.Status
+
 			patch := client.MergeFrom(cluster.DeepCopy())
 
-			peerIdsToNames := map[string]string{}
-			leaderId := uint64(0)
-		out:
-			for _, statefulset := range cluster.Spec.Statefulsets {
-				for i := 0; i < int(statefulset.Replicas); i++ {
-					uniqueName := fmt.Sprintf("%s-%d", statefulset.Name, i)
-					endpoint := fmt.Sprintf("%s.%s-headless.%s", uniqueName, cluster.Name, cluster.Namespace)
-					resp, err := http.Get("http://" + endpoint + ":6333/cluster")
-					if err != nil {
-						s.log.Error(err, "unable to get cluster info")
-						continue
-					}
-					body, err := io.ReadAll(resp.Body)
-					if err != nil {
-						s.log.Error(err, "unable to read response body")
-						continue
-					}
-					bodyString := string(body)
+			// Getting peers from main service endpoint
+			peers := qdrantv1alpha1.Peers{}
+			resp, err := http.Get("http://" + cluster.GetServiceName() + ":6333/cluster")
+			if err != nil {
+				s.log.Error(err, "unable to get cluster info")
+				continue
+			}
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				s.log.Error(err, "unable to read response body")
+				continue
+			}
+			resp.Body.Close()
+			bodyString := string(body)
 
-					leaderId = gjson.Get(bodyString, "result.raft_info.leader").Uint()
-					for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
-						peerIdsToNames[peerId] = strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
-					}
-					break out
+			leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
+			for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
+				serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
+				podName := strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1)
+				dns := serviceName + "." + cluster.Namespace
+
+				_, err := http.Get("http://" + dns + ":6333/readyz")
+				isReady := err == nil
+
+				peers[peerId] = &qdrantv1alpha1.Peer{
+					IsLeader:        leaderId == peerId,
+					StatefulSetName: strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-"),
+					PodName:         podName,
+					DNS:             dns,
+					IsReady:         isReady,
 				}
 			}
 
-			cluster.Status.PeerIdsToNames = peerIdsToNames
-			cluster.Status.RaftLeaderPeerId = leaderId
+			cluster.Status.Peers = peers
 
-			conn := s.getGrpcConnection(cluster.Status.PeerIdsToNames[strconv.FormatUint(cluster.Status.RaftLeaderPeerId, 10)] + ":6334")
-			if conn != nil {
-				collections, err := s.getCollections(conn)
-				if err == nil {
-					cluster.Status.Collections = collections
-				}
+			conn := s.getGrpcConnection(cluster.GetServiceName() + ":6334")
+			if conn == nil {
+				// error is already logged
+				continue
+			}
+			collectionsList, err := s.getCollections(conn)
+			if err != nil {
+				s.log.Error(err, "unable to get collections")
+				continue
 			}
 
-			shardsPerCollection := map[string][]*qdrantv1alpha1.ShardInfo{}
-			hasError := false
-			for _, collection := range cluster.Status.Collections {
-				shards := []*qdrantv1alpha1.ShardInfo{}
+			collections := map[string]*qdrantv1alpha1.Collection{}
+			for _, collection := range collectionsList {
+				collections[collection] = &qdrantv1alpha1.Collection{}
 
-				for _, name := range cluster.Status.PeerIdsToNames {
-					conn := s.getGrpcConnection(name + ":6334")
-					if err != nil {
-						continue
-					}
-					shards_found, err := s.getShardsInfo(conn, collection)
-					if err != nil {
-						continue
-					}
-					shards = append(shards, shards_found...)
-
-					slices.SortFunc(shards, func(a, b *qdrantv1alpha1.ShardInfo) int {
-						return cmp.Or(
-							cmp.Compare(*a.ShardId, *b.ShardId),
-							cmp.Compare(a.PeerId, b.PeerId),
-						)
-					})
-
-					if len(shards) > 0 {
-						shardsPerCollection[collection] = shards
-						break
-					}
+				collectionInfo, err := s.getCollectionInfo(conn, collection)
+				if err != nil {
+					continue
 				}
-
-				if len(shards) == 0 {
-					hasError = true
-					s.log.Error(fmt.Errorf("unable to get shards for collection %s", collection), "")
+				collections[collection].Status = collectionInfo.Status.String()
+				if collectionInfo.Config.Params.ReplicationFactor != nil {
+					collections[collection].ReplicationFactor = *collectionInfo.Config.Params.ReplicationFactor
+				} else {
+					collections[collection].ReplicationFactor = 1
 				}
+				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
+
+				shards, _, err := s.getShardsInfo(conn, collection)
+				if err != nil {
+					continue
+				}
+				collections[collection].Shards = shards
 			}
-			if !hasError {
-				cluster.Status.ShardsPerCollection = shardsPerCollection
-			}
+
+			cluster.Status.Collections = collections
 
 			err = s.manager.GetClient().Status().Patch(s.ctx, &cluster, patch)
 			if err != nil {
@@ -135,15 +133,15 @@ func (s *StatusHandler) Run() {
 
 		}
 
-		elapsed := time.Since(start)
-		s.log.Info(fmt.Sprintf("Fetching cluster data took %s", elapsed))
+		// elapsed := time.Since(start)
+		// s.log.Info(fmt.Sprintf("Fetching cluster data took %s", elapsed))
 	}
 }
 
 func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) {
 	collections := []string{}
-	client := pb.NewCollectionsClient(conn)
-	collectionsResponse, err := client.List(s.ctx, &pb.ListCollectionsRequest{})
+	client := qdrant.NewCollectionsClient(conn)
+	collectionsResponse, err := client.List(s.ctx, &qdrant.ListCollectionsRequest{})
 
 	if err != nil {
 		s.log.Error(err, "unable to list collections")
@@ -155,33 +153,56 @@ func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) 
 	return collections, nil
 }
 
-func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) ([]*qdrantv1alpha1.ShardInfo, error) {
-	shards := []*qdrantv1alpha1.ShardInfo{}
-	client := pb.NewCollectionsClient(conn)
+func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress []*qdrantv1alpha1.ShardInfo, err error) {
+	client := qdrant.NewCollectionsClient(conn)
 	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
 	defer cancel()
-	clusterInfoResponse, err := client.CollectionClusterInfo(ctx, &pb.CollectionClusterInfoRequest{
+	clusterInfoResponse, err := client.CollectionClusterInfo(ctx, &qdrant.CollectionClusterInfoRequest{
 		CollectionName: collectionName,
 	})
 	if err != nil {
 		s.log.Error(err, "unable to list shards")
-		return nil, err
+		return nil, nil, err
 	}
+
+	shards = map[string]qdrantv1alpha1.ShardsList{}
+	localPeerId := strconv.FormatUint(clusterInfoResponse.PeerId, 10)
 	for _, shard := range clusterInfoResponse.LocalShards {
-		shards = append(shards, &qdrantv1alpha1.ShardInfo{
-			PeerId:  clusterInfoResponse.PeerId,
+		shards[localPeerId] = append(shards[localPeerId], &qdrantv1alpha1.ShardInfo{
 			ShardId: &shard.ShardId,
-			State:   &shard.State,
+			State:   shard.State.String(),
 		})
 	}
 	for _, shard := range clusterInfoResponse.RemoteShards {
-		shards = append(shards, &qdrantv1alpha1.ShardInfo{
-			PeerId:  shard.PeerId,
+		peerId := strconv.FormatUint(shard.PeerId, 10)
+		shards[peerId] = append(shards[peerId], &qdrantv1alpha1.ShardInfo{
 			ShardId: &shard.ShardId,
-			State:   &shard.State,
+			State:   shard.State.String(),
 		})
 	}
-	return shards, nil
+	for _, shards := range shards {
+		slices.SortFunc(shards, func(a, b *qdrantv1alpha1.ShardInfo) int {
+			return cmp.Compare(*a.ShardId, *b.ShardId)
+		})
+	}
+	for _, shard := range clusterInfoResponse.ShardTransfers {
+		fmt.Println("SHARD TRANSFER", shard)
+	}
+	return shards, nil, nil
+}
+
+func (s *StatusHandler) getCollectionInfo(conn *grpc.ClientConn, collectionName string) (*qdrant.CollectionInfo, error) {
+	client := qdrant.NewCollectionsClient(conn)
+	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
+	defer cancel()
+	clusterInfoResponse, err := client.Get(ctx, &qdrant.GetCollectionInfoRequest{
+		CollectionName: collectionName,
+	})
+	if err != nil {
+		s.log.Error(err, "unable to get collection statu")
+		return nil, err
+	}
+	return clusterInfoResponse.Result, nil
 }
 
 func (s *StatusHandler) getGrpcConnection(url string) *grpc.ClientConn {

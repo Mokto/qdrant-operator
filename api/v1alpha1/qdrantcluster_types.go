@@ -1,24 +1,7 @@
-/*
-Copyright 2024.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"qdrantoperator.io/operator/internal/qdrant"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -51,20 +34,12 @@ type QdrantClusterSpec struct {
 	Statefulsets []StatefulSet `json:"statefulsets,omitempty"`
 }
 
-type ShardInfo struct {
-	PeerId  uint64               `json:"peerId,omitempty"`
-	ShardId *uint32              `json:"shardId,omitempty"`
-	State   *qdrant.ReplicaState `json:"state,omitempty"`
-}
-
 // QdrantClusterStatus defines the observed state of QdrantCluster
 type QdrantClusterStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
-	RaftLeaderPeerId    uint64                  `json:"raftLeader,omitempty"`
-	PeerIdsToNames      map[string]string       `json:"peerIds,omitempty"`
-	Collections         []string                `json:"collections,omitempty"`
-	ShardsPerCollection map[string][]*ShardInfo `json:"shards,omitempty"`
-	ShardsInProgress    map[string][]*ShardInfo `json:"shardsInProgress,omitempty"`
+	Peers                         Peers             `json:"peers,omitempty"`
+	Collections                   Collections       `json:"collections,omitempty"`
+	DesiredReplicasPerStatefulSet map[string]*int32 `json:"desiredReplicasPerStatefulset,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -77,6 +52,14 @@ type QdrantCluster struct {
 
 	Spec   QdrantClusterSpec   `json:"spec,omitempty"`
 	Status QdrantClusterStatus `json:"status,omitempty"`
+}
+
+func (q *QdrantCluster) GetServiceName() string {
+	return q.Name
+}
+
+func (q *QdrantCluster) GetHeadlessServiceName() string {
+	return q.Name + "-headless"
 }
 
 // +kubebuilder:object:root=true

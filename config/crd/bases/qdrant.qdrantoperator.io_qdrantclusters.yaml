@@ -70,49 +70,71 @@ spec:
             description: QdrantClusterStatus defines the observed state of QdrantCluster
             properties:
               collections:
-                items:
-                  type: string
-                type: array
-              peerIds:
                 additionalProperties:
-                  type: string
+                  properties:
+                    name:
+                      type: string
+                    replicationFactor:
+                      format: int32
+                      type: integer
+                    shardNumber:
+                      format: int32
+                      type: integer
+                    shards:
+                      additionalProperties:
+                        items:
+                          properties:
+                            peerId:
+                              format: int64
+                              type: integer
+                            shardId:
+                              format: int32
+                              type: integer
+                            state:
+                              type: string
+                          type: object
+                        type: array
+                      type: object
+                    shardsInProgress:
+                      items:
+                        properties:
+                          peerId:
+                            format: int64
+                            type: integer
+                          shardId:
+                            format: int32
+                            type: integer
+                          state:
+                            type: string
+                        type: object
+                      type: array
+                    status:
+                      type: string
+                  type: object
                 type: object
-              raftLeader:
+              desiredReplicasPerStatefulset:
+                additionalProperties:
+                  format: int32
+                  type: integer
+                type: object
+              peers:
+                additionalProperties:
+                  properties:
+                    dns:
+                      type: string
+                    isLeader:
+                      type: boolean
+                    isReady:
+                      type: boolean
+                    podName:
+                      type: string
+                    statefulSetName:
+                      type: string
+                    status:
+                      type: string
+                  type: object
                 description: 'Important: Run "make" to regenerate code after modifying
                   this file'
-                format: int64
-                type: integer
-              shards:
-                additionalProperties:
-                  items:
-                    properties:
-                      peerId:
-                        format: int64
-                        type: integer
-                      shardId:
-                        format: int32
-                        type: integer
-                      state:
-                        format: int32
-                        type: integer
-                    type: object
-                  type: array
-                type: object
-              shardsInProgress:
-                additionalProperties:
-                  items:
-                    properties:
-                      peerId:
-                        format: int64
-                        type: integer
-                      shardId:
-                        format: int32
-                        type: integer
-                      state:
-                        format: int32
-                        type: integer
-                    type: object
-                  type: array
                 type: object
             type: object
         type: object

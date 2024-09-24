@@ -12,11 +12,11 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	pdb := &v1policy.PodDisruptionBudget{
 		ObjectMeta: v1meta.ObjectMeta{
 			Name:      obj.Name,
-			Namespace: namespace,
+			Namespace: obj.Namespace,
 			OwnerReferences: []v1meta.OwnerReference{{
 				APIVersion: obj.APIVersion,
 				Kind:       obj.Kind,
@@ -40,7 +40,7 @@ func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 	log.Info("Deploying PDB")
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      obj.Name,
-		Namespace: namespace,
+		Namespace: obj.Namespace,
 	}, existingPdb); err != nil {
 
 		if err := r.Client.Create(ctx, pdb); err != nil {

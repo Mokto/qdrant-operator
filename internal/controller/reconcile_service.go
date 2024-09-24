@@ -11,11 +11,11 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	service := &v1core.Service{
 		ObjectMeta: v1meta.ObjectMeta{
-			Name:      obj.Name,
-			Namespace: namespace,
+			Name:      obj.GetServiceName(),
+			Namespace: obj.Namespace,
 			OwnerReferences: []v1meta.OwnerReference{{
 				APIVersion: obj.APIVersion,
 				Kind:       obj.Kind,
@@ -49,8 +49,8 @@ func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr
 
 	log.Info("Deploying Service")
 	if err := r.Get(ctx, types.NamespacedName{
-		Name:      obj.Name,
-		Namespace: namespace,
+		Name:      obj.GetServiceName(),
+		Namespace: obj.Namespace,
 	}, existingService); err != nil {
 
 		if err := r.Client.Create(ctx, service); err != nil {
@@ -66,11 +66,11 @@ func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr
 	return nil
 }
 
-func (r *QdrantClusterReconciler) reconcileHeadlessService(ctx context.Context, log logr.Logger, namespace string, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) reconcileHeadlessService(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	service := &v1core.Service{
 		ObjectMeta: v1meta.ObjectMeta{
-			Name:      obj.Name + "-headless",
-			Namespace: namespace,
+			Name:      obj.GetHeadlessServiceName(),
+			Namespace: obj.Namespace,
 			OwnerReferences: []v1meta.OwnerReference{{
 				APIVersion: obj.APIVersion,
 				Kind:       obj.Kind,
@@ -105,8 +105,8 @@ func (r *QdrantClusterReconciler) reconcileHeadlessService(ctx context.Context, 
 	existingService := &v1core.Service{}
 
 	if err := r.Get(ctx, types.NamespacedName{
-		Name:      obj.Name + "-headless",
-		Namespace: namespace,
+		Name:      obj.GetHeadlessServiceName(),
+		Namespace: obj.Namespace,
 	}, existingService); err != nil {
 		log.Info("Deploying headless Service...")
 		if err := r.Client.Create(ctx, service); err != nil {
