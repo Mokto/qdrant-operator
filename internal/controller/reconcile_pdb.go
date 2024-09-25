@@ -10,9 +10,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
+	"qdrantoperator.io/operator/internal/qdrant"
 )
 
 func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+	maxUnavailable := int32(1)
+	for _, collection := range obj.Status.Collections {
+		if collection.Status != qdrant.CollectionStatus_Green.String() {
+			maxUnavailable = 0
+			break
+		}
+	}
 	pdb := &v1policy.PodDisruptionBudget{
 		ObjectMeta: v1meta.ObjectMeta{
 			Name:      obj.Name,
@@ -26,7 +34,7 @@ func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 		},
 		TypeMeta: v1meta.TypeMeta{APIVersion: "policy/v1", Kind: "PodDisruptionBudget"},
 		Spec: v1policy.PodDisruptionBudgetSpec{
-			MaxUnavailable: &intstr.IntOrString{IntVal: 0},
+			MaxUnavailable: &intstr.IntOrString{IntVal: maxUnavailable},
 			Selector: &v1meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"cluster": obj.Name,
@@ -48,6 +56,7 @@ func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 		}
 	} else {
 		existingPdb.Spec.Selector = pdb.Spec.Selector
+		existingPdb.Spec.MaxUnavailable = pdb.Spec.MaxUnavailable
 
 		if err := r.Client.Update(ctx, existingPdb); err != nil {
 			return err
