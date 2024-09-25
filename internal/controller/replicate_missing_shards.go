@@ -53,6 +53,7 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 									ShardId:    shardNumber,
 									FromPeerId: fromPeerId,
 									ToPeerId:   toPeerId,
+									Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
 								},
 							},
 						})
@@ -65,30 +66,6 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 				}
 			}
 		}
-		// conn, err := grpc.NewClient(obj.Status.Peers[*to].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
-		// if err != nil {
-		// 	log.Error(err, "grpc.NewClient")
-		// 	return nil
-		// }
-		// defer conn.Close()
-
-		// client := qdrant.NewCollectionsClient(conn)
-		// _, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
-		// 	CollectionName: collectionName,
-		// 	Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
-		// 		MoveShard: &qdrant.MoveShard{
-		// 			ShardId:    *foundShardNumber,
-		// 			FromPeerId: fromPeerId,
-		// 			ToPeerId:   toPeerId,
-		// 		},
-		// 	},
-		// })
-		// if err != nil {
-		// 	log.Error(err, "unable to move shards")
-		// 	return nil
-		// }
-		// log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
-
 	}
 	return hasDuplicatedShards, nil
 }

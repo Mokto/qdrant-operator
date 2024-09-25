@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net/http"
 	"slices"
 	"strconv"
 
@@ -20,6 +21,10 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 	for collectionName, collection := range obj.Status.Collections {
 		if collection.Status != qdrant.CollectionStatus_Green.String() {
 			log.Info(collectionName + " is not ready to be optimized (status " + collection.Status + "). Skipping.")
+			continue
+		}
+		if collection.ShardsInProgress {
+			log.Info(collectionName + " has shards in progress. Skipping.")
 			continue
 		}
 
@@ -103,31 +108,41 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 				panic(err)
 			}
 
-			client := qdrant.NewCollectionsClient(conn)
-			connectionExists, err := client.CollectionExists(ctx, &qdrant.CollectionExistsRequest{CollectionName: collectionName})
+			resp, err := http.Get("http://" + obj.Status.Peers[*to].DNS + ":6333/readyz")
 			if err != nil {
-				log.Error(err, "unable to check if the collection exists")
-				return err
+				log.Error(err, "unable to get pod status")
+				continue
 			}
-			if connectionExists.Result.Exists {
-				_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
-					CollectionName: collectionName,
-					Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
-						MoveShard: &qdrant.MoveShard{
-							ShardId:    *foundShardNumber,
-							FromPeerId: fromPeerId,
-							ToPeerId:   toPeerId,
-							Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
-						},
-					},
-				})
+
+			if resp.StatusCode == 200 {
+				client := qdrant.NewCollectionsClient(conn)
+				connectionExists, err := client.CollectionExists(ctx, &qdrant.CollectionExistsRequest{CollectionName: collectionName})
 				if err != nil {
-					log.Error(err, "unable to move shards")
+					log.Error(err, "unable to check if the collection exists")
 					return err
 				}
-				log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
+				if connectionExists.Result.Exists {
+					_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+						CollectionName: collectionName,
+						Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
+							MoveShard: &qdrant.MoveShard{
+								ShardId:    *foundShardNumber,
+								FromPeerId: fromPeerId,
+								ToPeerId:   toPeerId,
+								Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
+							},
+						},
+					})
+					if err != nil {
+						log.Error(err, "unable to move shards")
+						return err
+					}
+					log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
+				} else {
+					log.Info("Collection doesn't exist on receiving node. Skipping for now.")
+				}
 			} else {
-				log.Info("Collection doesn't exist on receiving node. Skipping for now.")
+				log.Info("Receiving node is not ready. Skipping for now.")
 			}
 		}
 

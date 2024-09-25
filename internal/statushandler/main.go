@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -85,8 +84,8 @@ func (s *StatusHandler) Run() {
 				podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
 				dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
 
-				_, err := http.Get("http://" + dns + ":6333/readyz")
-				isReady := err == nil
+				resp, err := http.Get("http://" + dns + ":6333/readyz")
+				isReady := err == nil && resp.StatusCode == 200
 
 				peers[peerId] = &qdrantv1alpha1.Peer{
 					IsLeader:        leaderId == peerId,
@@ -139,11 +138,12 @@ func (s *StatusHandler) Run() {
 				}
 				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
 
-				shards, _, err := s.getShardsInfo(conn, collection)
+				shards, shardInProgress, err := s.getShardsInfo(conn, collection)
 				if err != nil {
 					continue
 				}
 				collections[collection].Shards = shards
+				collections[collection].ShardsInProgress = shardInProgress
 			}
 
 			cluster.Status.Collections = collections
@@ -175,7 +175,7 @@ func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) 
 	return collections, nil
 }
 
-func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress []*qdrantv1alpha1.ShardInfo, err error) {
+func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress bool, err error) {
 	client := qdrant.NewCollectionsClient(conn)
 	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
 	defer cancel()
@@ -184,7 +184,7 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 	})
 	if err != nil {
 		s.log.Error(err, "unable to list shards")
-		return nil, nil, err
+		return nil, false, err
 	}
 
 	shards = map[string]qdrantv1alpha1.ShardsList{}
@@ -208,16 +208,9 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 		})
 	}
 	if len(clusterInfoResponse.ShardTransfers) > 0 {
-
-		fmt.Println("--------------------")
-		fmt.Println("--------------------")
-		fmt.Println("--------------------")
-		for _, shard := range clusterInfoResponse.ShardTransfers {
-			fmt.Println("SHARD TRANSFER", shard)
-		}
-		fmt.Println("--------------------")
+		shardsInProgress = true
 	}
-	return shards, nil, nil
+	return shards, shardsInProgress, nil
 }
 
 func (s *StatusHandler) getCollectionInfo(conn *grpc.ClientConn, collectionName string) (*qdrant.CollectionInfo, error) {

@@ -18,7 +18,7 @@ type Collection struct {
 	ReplicationFactor uint32        `json:"replicationFactor,omitempty"`
 	ShardNumber       uint32        `json:"shardNumber,omitempty"`
 	Shards            ShardsPerPeer `json:"shards,omitempty"`
-	ShardsInProgress  ShardsList    `json:"shardsInProgress,omitempty"`
+	ShardsInProgress  bool          `json:"shardsInProgress,omitempty"`
 }
 
 type ShardInfo struct {

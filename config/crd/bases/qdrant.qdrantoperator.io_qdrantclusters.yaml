@@ -1146,18 +1146,7 @@ spec:
                         type: array
                       type: object
                     shardsInProgress:
-                      items:
-                        properties:
-                          peerId:
-                            format: int64
-                            type: integer
-                          shardId:
-                            format: int32
-                            type: integer
-                          state:
-                            type: string
-                        type: object
-                      type: array
+                      type: boolean
                     status:
                       type: string
                   type: object
