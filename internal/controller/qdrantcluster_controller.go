@@ -95,6 +95,8 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	log.Info("Reconcilied QdrantCluster " + obj.Name)
+
 	if obj.Status.Peers.GetLeader() == nil {
 		return ctrl.Result{}, nil
 	}

@@ -86,7 +86,6 @@ exec ./entrypoint.sh --bootstrap 'http://` + leader.DNS + `:6335' --uri 'http://
 
 	existingConfigmap := &v1core.ConfigMap{}
 
-	log.Info("Deploying Configmap")
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,

@@ -13,7 +13,7 @@ import (
 	"qdrantoperator.io/operator/internal/qdrant"
 )
 
-func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, _ logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	maxUnavailable := int32(1)
 	for _, collection := range obj.Status.Collections {
 		if collection.Status != qdrant.CollectionStatus_Green.String() {
@@ -45,7 +45,6 @@ func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Conte
 
 	existingPdb := &v1policy.PodDisruptionBudget{}
 
-	log.Info("Deploying PDB")
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      obj.Name,
 		Namespace: obj.Namespace,

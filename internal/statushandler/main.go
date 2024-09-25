@@ -53,9 +53,15 @@ func (s *StatusHandler) Run() {
 		for _, cluster := range clusters.Items {
 			patch := client.MergeFrom(cluster.DeepCopy())
 
+			serviceName := cluster.GetServiceName()
+			leader := cluster.Status.Peers.GetLeader()
+			if cluster.Status.Peers.GetLeader() != nil {
+				serviceName = leader.DNS
+			}
+
 			// Getting peers from main service endpoint
 			peers := qdrantv1alpha1.Peers{}
-			resp, err := http.Get("http://" + cluster.GetServiceName() + ":6333/cluster")
+			resp, err := http.Get("http://" + serviceName + ":6333/cluster")
 			if err != nil {
 				s.log.Error(err, "unable to get cluster info")
 				continue

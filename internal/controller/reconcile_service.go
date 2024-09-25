@@ -11,7 +11,7 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, _ logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	service := &v1core.Service{
 		ObjectMeta: v1meta.ObjectMeta{
 			Name:      obj.GetServiceName(),
@@ -47,7 +47,6 @@ func (r *QdrantClusterReconciler) reconcileService(ctx context.Context, log logr
 
 	existingService := &v1core.Service{}
 
-	log.Info("Deploying Service")
 	if err := r.Get(ctx, types.NamespacedName{
 		Name:      obj.GetServiceName(),
 		Namespace: obj.Namespace,

@@ -26,7 +26,6 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 	securityGroup := int64(2000)
 
 	leader := obj.Status.Peers.GetLeader()
-	log.Info("Deploying StatefulSets")
 	indexStatefulSet := 0
 	for _, statefulSetConfig := range obj.Spec.Statefulsets {
 		if indexStatefulSet > 0 && leader == nil {
