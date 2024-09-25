@@ -14,7 +14,7 @@ import (
 func (r *QdrantClusterReconciler) clearEmptyNodes(_ context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	statefulsetsNumberOfReplicas := map[string]int32{}
 	for _, statefulset := range obj.Spec.Statefulsets {
-		statefulsetsNumberOfReplicas[statefulset.Name] = statefulset.Replicas
+		statefulsetsNumberOfReplicas[obj.Name+"-"+statefulset.Name] = statefulset.Replicas
 	}
 
 	for peerId, peer := range obj.Status.Peers {

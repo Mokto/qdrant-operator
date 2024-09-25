@@ -30,15 +30,11 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 	indexStatefulSet := 0
 	for _, statefulSetConfig := range obj.Spec.Statefulsets {
 		if indexStatefulSet > 0 && leader == nil {
-			// obj.Status.SetDesiredReplicasPerStatefulSet(statefulSetConfig.Name, statefulSetConfig.Replicas)
-			// if err := r.Client.Update(ctx, obj); err != nil {
-			// 	return err
-			// }
 			continue
 		}
 		labels := map[string]string{
 			"cluster": obj.Name,
-			"name":    statefulSetConfig.Name,
+			"name":    obj.Name + "-" + statefulSetConfig.Name,
 		}
 		podTemplate := v1core.PodTemplateSpec{
 			ObjectMeta: v1meta.ObjectMeta{Labels: labels, Annotations: map[string]string{"checksum": checksum}},
@@ -158,7 +154,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 		}
 		statefulSet := &v1.StatefulSet{}
 		if err := r.Get(ctx, types.NamespacedName{
-			Name:      statefulSetConfig.Name,
+			Name:      obj.Name + "-" + statefulSetConfig.Name,
 			Namespace: obj.Namespace,
 		}, statefulSet); err != nil {
 			replicas := &statefulSetConfig.Replicas
@@ -168,9 +164,8 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			}
 			statefulSet = &v1.StatefulSet{
 				ObjectMeta: v1meta.ObjectMeta{
-					Name:      statefulSetConfig.Name,
+					Name:      obj.Name + "-" + statefulSetConfig.Name,
 					Namespace: obj.Namespace,
-					Labels:    labels,
 					OwnerReferences: []v1meta.OwnerReference{{
 						APIVersion: obj.APIVersion,
 						Kind:       obj.Kind,
