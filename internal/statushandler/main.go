@@ -41,8 +41,12 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 }
 
 func (s *StatusHandler) Run() {
+	shouldSleep := false
 	for {
-		time.Sleep(3 * time.Second)
+		if shouldSleep {
+			time.Sleep(3 * time.Second)
+		}
+		shouldSleep = true
 
 		// start := time.Now()
 		clusters := &qdrantv1alpha1.QdrantClusterList{}
@@ -55,10 +59,10 @@ func (s *StatusHandler) Run() {
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			serviceName := cluster.GetServiceName()
-			leader := cluster.Status.Peers.GetLeader()
-			if cluster.Status.Peers.GetLeader() != nil {
-				serviceName = leader.DNS
-			}
+			// leader := cluster.Status.Peers.GetLeader()
+			// if cluster.Status.Peers.GetLeader() != nil {
+			// 	serviceName = leader.DNS
+			// }
 
 			// Getting peers from main service endpoint
 			peers := qdrantv1alpha1.Peers{}
@@ -98,6 +102,15 @@ func (s *StatusHandler) Run() {
 				continue
 			}
 			cluster.Status.Peers = peers
+
+			hasDeletedPeers, err := s.clearDuplicatePeers(&cluster)
+			if err != nil {
+				s.log.Error(err, "unable to read response body")
+				continue
+			}
+			if hasDeletedPeers {
+				shouldSleep = false
+			}
 
 			conn := s.getGrpcConnection(cluster.GetServiceName() + ":6334")
 			if conn == nil {
@@ -215,7 +228,7 @@ func (s *StatusHandler) getCollectionInfo(conn *grpc.ClientConn, collectionName 
 		CollectionName: collectionName,
 	})
 	if err != nil {
-		s.log.Error(err, "unable to get collection statu")
+		s.log.Error(err, "unable to get collection status")
 		return nil, err
 	}
 	return clusterInfoResponse.Result, nil

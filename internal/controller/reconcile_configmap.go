@@ -62,8 +62,12 @@ func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log lo
 	if leader != nil {
 		config = `
 #!/bin/sh
-exec ./entrypoint.sh --bootstrap 'http://` + leader.DNS + `:6335' --uri 'http://'"$HOSTNAME"'.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335'
+LEADER=http://` + leader.DNS + `:6335
+SELF=http://$HOSTNAME.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335
+echo "Leader is $LEADER. Self is $SELF"
+exec ./entrypoint.sh --bootstrap $LEADER --uri $SELF
 `
+		// exec ./entrypoint.sh --bootstrap 'http://` + leader.DNS + `:6335' --uri 'http://'"$HOSTNAME"'.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335'
 	}
 
 	data["initialize.sh"] = config
