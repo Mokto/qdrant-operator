@@ -117,6 +117,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 							ShardId:    *foundShardNumber,
 							FromPeerId: fromPeerId,
 							ToPeerId:   toPeerId,
+							Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
 						},
 					},
 				})

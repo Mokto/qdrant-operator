@@ -10,7 +10,7 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (r *QdrantClusterReconciler) clearDuplicatePeers(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (hasDoneAnything bool, err error) {
+func (r *QdrantClusterReconciler) clearDuplicatePeers(_ context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (hasDoneAnything bool, err error) {
 
 	hasDoneAnything = false
 

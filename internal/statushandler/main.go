@@ -3,6 +3,7 @@ package statushandler
 import (
 	"cmp"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -92,6 +93,10 @@ func (s *StatusHandler) Run() {
 				}
 			}
 
+			if peers.GetLeader() == nil {
+				s.log.Error(errors.New("leader not found"), "Leader not found")
+				continue
+			}
 			cluster.Status.Peers = peers
 
 			conn := s.getGrpcConnection(cluster.GetServiceName() + ":6334")
