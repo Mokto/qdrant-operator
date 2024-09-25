@@ -36,12 +36,66 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			"cluster": obj.Name,
 			"name":    obj.Name + "-" + statefulSetConfig.Name,
 		}
+		var volumeClaimTemplates []v1core.PersistentVolumeClaim
+		volumes := []v1core.Volume{{
+			Name: "qdrant-init",
+			VolumeSource: v1core.VolumeSource{
+				EmptyDir: &v1core.EmptyDirVolumeSource{},
+			},
+		}, {
+			Name: "qdrant-snapshots",
+			VolumeSource: v1core.VolumeSource{
+				EmptyDir: &v1core.EmptyDirVolumeSource{},
+			},
+		}, {
+			Name: "qdrant-config",
+			VolumeSource: v1core.VolumeSource{
+				ConfigMap: &v1core.ConfigMapVolumeSource{
+					LocalObjectReference: v1core.LocalObjectReference{
+						Name: obj.Name,
+					},
+					DefaultMode: &[]int32{493}[0],
+				},
+			},
+		}}
+		if statefulSetConfig.VolumeClaim != nil {
+			volumeClaimTemplates = []v1core.PersistentVolumeClaim{{
+				ObjectMeta: v1meta.ObjectMeta{Name: "qdrant-storage"},
+				Spec: v1core.PersistentVolumeClaimSpec{
+					AccessModes:      []v1core.PersistentVolumeAccessMode{v1core.ReadWriteOnce},
+					StorageClassName: &statefulSetConfig.VolumeClaim.StorageClassName,
+					Resources: v1core.VolumeResourceRequirements{
+						Requests: v1core.ResourceList{
+							"storage": resource.MustParse(statefulSetConfig.VolumeClaim.Storage),
+						},
+					},
+				},
+			}}
+		} else {
+			volumes = append(volumes, v1core.Volume{
+				Name: "qdrant-storage",
+				VolumeSource: v1core.VolumeSource{
+					EmptyDir: &v1core.EmptyDirVolumeSource{},
+				},
+			})
+		}
+		affinity := statefulSetConfig.Affinity
+		if affinity == nil {
+			affinity = &v1core.Affinity{}
+		}
+		if affinity.PodAntiAffinity == nil {
+			affinity.PodAntiAffinity = &v1core.PodAntiAffinity{}
+		}
+		affinity.PodAntiAffinity.RequiredDuringSchedulingIgnoredDuringExecution = []v1core.PodAffinityTerm{{
+			LabelSelector: &v1meta.LabelSelector{MatchLabels: map[string]string{"cluster": obj.Name}},
+			TopologyKey:   "kubernetes.io/hostname",
+		}}
 		podTemplate := v1core.PodTemplateSpec{
 			ObjectMeta: v1meta.ObjectMeta{Labels: labels, Annotations: map[string]string{"checksum": checksum}},
 			Spec: v1core.PodSpec{
 				InitContainers: []v1core.Container{{
 					Name:  "ensure-dir-ownership",
-					Image: "qdrant/qdrant:v1.11.4",
+					Image: obj.Spec.Image,
 					Command: []string{
 						"chown",
 						"-R",
@@ -59,7 +113,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 				}},
 				Containers: []v1core.Container{{
 					Name:  "qdrant",
-					Image: "qdrant/qdrant:v1.11.4",
+					Image: obj.Spec.Image,
 					Command: []string{
 						"/bin/bash",
 						"-c",
@@ -71,6 +125,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 						Name:  "QDRANT_INIT_FILE_PATH",
 						Value: "/qdrant/init/.qdrant-initialized",
 					}},
+					Resources: statefulSetConfig.Resources,
 					Lifecycle: &v1core.Lifecycle{
 						PreStop: &v1core.LifecycleHandler{
 							Exec: &v1core.ExecAction{
@@ -129,27 +184,11 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					}},
 				}},
 				PriorityClassName: statefulSetConfig.PriorityClassName,
-				Volumes: []v1core.Volume{{
-					Name: "qdrant-init",
-					VolumeSource: v1core.VolumeSource{
-						EmptyDir: &v1core.EmptyDirVolumeSource{},
-					},
-				}, {
-					Name: "qdrant-snapshots",
-					VolumeSource: v1core.VolumeSource{
-						EmptyDir: &v1core.EmptyDirVolumeSource{},
-					},
-				}, {
-					Name: "qdrant-config",
-					VolumeSource: v1core.VolumeSource{
-						ConfigMap: &v1core.ConfigMapVolumeSource{
-							LocalObjectReference: v1core.LocalObjectReference{
-								Name: obj.Name,
-							},
-							DefaultMode: &[]int32{493}[0],
-						},
-					},
-				}},
+				NodeSelector:      statefulSetConfig.NodeSelector,
+				ImagePullSecrets:  obj.Spec.ImagePullSecrets,
+				Affinity:          affinity,
+				Tolerations:       statefulSetConfig.Tolerations,
+				Volumes:           volumes,
 			},
 		}
 		statefulSet := &v1.StatefulSet{}
@@ -184,19 +223,8 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					// PodManagementPolicy: v1.PodManagementPolicyType("OrderedReady"),
 					ServiceName: obj.GetHeadlessServiceName(),
 
-					Template: podTemplate,
-					VolumeClaimTemplates: []v1core.PersistentVolumeClaim{{
-						ObjectMeta: v1meta.ObjectMeta{Name: "qdrant-storage"},
-						Spec: v1core.PersistentVolumeClaimSpec{
-							AccessModes:      []v1core.PersistentVolumeAccessMode{v1core.ReadWriteOnce},
-							StorageClassName: &statefulSetConfig.VolumeClaim.StorageClassName,
-							Resources: v1core.VolumeResourceRequirements{
-								Requests: v1core.ResourceList{
-									"storage": resource.MustParse(statefulSetConfig.VolumeClaim.Storage),
-								},
-							},
-						},
-					}},
+					Template:             podTemplate,
+					VolumeClaimTemplates: volumeClaimTemplates,
 				},
 			}
 
@@ -229,7 +257,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 						cordonedPeerIds = append(cordonedPeerIds, peerId)
 					}
 
-				} else {
+				} else if statefulSetConfig.Replicas > *statefulSet.Spec.Replicas {
 					log.Info("We can scale immediately")
 					statefulSet.Spec.Replicas = &statefulSetConfig.Replicas
 				}

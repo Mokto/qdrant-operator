@@ -104,6 +104,15 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	hasDoneAnything, err := r.clearDuplicatePeers(ctx, log, obj)
+	if err != nil {
+		log.Error(err, "unable to clear duplicate peers")
+		return ctrl.Result{}, err
+	}
+	if hasDoneAnything {
+		return ctrl.Result{}, nil
+	}
+
 	hasDuplicatedShards, err := r.replicateMissingShards(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to duplicate shards")

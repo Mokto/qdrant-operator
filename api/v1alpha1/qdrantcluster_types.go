@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -19,10 +20,15 @@ type StatefulSet struct {
 	// +required
 	Name string `json:"name,omitempty"`
 	// +required
-	Replicas          int32        `json:"replicas,omitempty"`
-	PriorityClassName string       `json:"priorityClassName,omitempty"`
-	VolumeClaim       *VolumeClaim `json:"volumeClaim,omitempty"`
-	EphemeralStorage  bool         `json:"ephemeralStorage,omitempty"`
+	Replicas int32 `json:"replicas,omitempty"`
+
+	VolumeClaim       *VolumeClaim                `json:"volumeClaim,omitempty"`
+	EphemeralStorage  bool                        `json:"ephemeralStorage,omitempty"`
+	NodeSelector      map[string]string           `json:"nodeSelector,omitempty"`
+	Affinity          *corev1.Affinity            `json:"affinity,omitempty"`
+	Tolerations       []corev1.Toleration         `json:"tolerations,omitempty"`
+	PriorityClassName string                      `json:"priorityClassName,omitempty"`
+	Resources         corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // QdrantClusterSpec defines the desired state of QdrantCluster
@@ -30,8 +36,10 @@ type QdrantClusterSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of QdrantCluster. Edit qdrantcluster_types.go to remove/update
-	Statefulsets []StatefulSet `json:"statefulsets,omitempty"`
+	// +required
+	Image            string                        `json:"image,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
+	Statefulsets     []StatefulSet                 `json:"statefulsets,omitempty"`
 }
 
 // QdrantClusterStatus defines the observed state of QdrantCluster

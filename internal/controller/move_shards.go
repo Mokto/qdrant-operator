@@ -19,7 +19,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 
 	for collectionName, collection := range obj.Status.Collections {
 		if collection.Status != qdrant.CollectionStatus_Green.String() {
-			log.Info(collectionName + " is not ready to be optimized. Skipping.")
+			log.Info(collectionName + " is not ready to be optimized (status " + collection.Status + "). Skipping.")
 			continue
 		}
 
@@ -104,21 +104,30 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 			}
 
 			client := qdrant.NewCollectionsClient(conn)
-			_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
-				CollectionName: collectionName,
-				Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
-					MoveShard: &qdrant.MoveShard{
-						ShardId:    *foundShardNumber,
-						FromPeerId: fromPeerId,
-						ToPeerId:   toPeerId,
-					},
-				},
-			})
+			connectionExists, err := client.CollectionExists(ctx, &qdrant.CollectionExistsRequest{CollectionName: collectionName})
 			if err != nil {
-				log.Error(err, "unable to move shards")
+				log.Error(err, "unable to check if the collection exists")
 				return err
 			}
-			log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
+			if connectionExists.Result.Exists {
+				_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+					CollectionName: collectionName,
+					Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
+						MoveShard: &qdrant.MoveShard{
+							ShardId:    *foundShardNumber,
+							FromPeerId: fromPeerId,
+							ToPeerId:   toPeerId,
+						},
+					},
+				})
+				if err != nil {
+					log.Error(err, "unable to move shards")
+					return err
+				}
+				log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
+			} else {
+				log.Info("Collection doesn't exist on receiving node. Skipping for now.")
+			}
 		}
 
 	}

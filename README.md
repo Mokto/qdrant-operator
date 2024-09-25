@@ -1,5 +1,11 @@
 # qdrant-operator
-// TODO(user): Add simple overview of use/purpose
+
+Qdrant-operator is an operator for Qdrant that allows:
+
+- Supports multi stateful set: that way you can support one set on normal storage and one on localstorage for optimal perforamnces/price for example
+- Graceful scaling down (will move all shards out of a node before scaling down)
+- Graceful scaling up: will balance all shards automatically
+
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
