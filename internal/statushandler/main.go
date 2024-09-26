@@ -40,7 +40,10 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 }
 
 func (s *StatusHandler) Run() {
-	shouldSleep := false
+
+	go s.watchAndRemoveDeletedPeers()
+
+	shouldSleep := true
 	for {
 		if shouldSleep {
 			time.Sleep(3 * time.Second)
@@ -83,16 +86,26 @@ func (s *StatusHandler) Run() {
 				serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
 				podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
 				dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
+				statefulsetName := strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-")
 
 				resp, err := http.Get("http://" + dns + ":6333/readyz")
 				isReady := err == nil && resp.StatusCode == 200
 
+				foundStatefulset := qdrantv1alpha1.StatefulSet{}
+				for _, statefulsetConfig := range cluster.Spec.Statefulsets {
+					if cluster.Name+"-"+statefulsetConfig.Name == statefulsetName {
+						foundStatefulset = statefulsetConfig
+						break
+					}
+				}
+
 				peers[peerId] = &qdrantv1alpha1.Peer{
-					IsLeader:        leaderId == peerId,
-					StatefulSetName: strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-"),
-					PodName:         podName,
-					DNS:             dns,
-					IsReady:         isReady,
+					IsLeader:         leaderId == peerId,
+					StatefulSetName:  statefulsetName,
+					PodName:          podName,
+					DNS:              dns,
+					IsReady:          isReady,
+					EphemeralStorage: foundStatefulset.EphemeralStorage,
 				}
 			}
 
@@ -143,7 +156,20 @@ func (s *StatusHandler) Run() {
 					continue
 				}
 				collections[collection].Shards = shards
-				collections[collection].ShardsInProgress = shardInProgress
+
+				hasInProgressShards := false
+				for _, shardInProgress := range shardInProgress {
+					peerIdTo := strconv.FormatUint(shardInProgress.To, 10)
+					peerIdFrom := strconv.FormatUint(shardInProgress.From, 10)
+					if cluster.Status.Peers[peerIdTo] == nil {
+						s.abortShardTransfer(s.ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+					} else if cluster.Status.Peers[peerIdFrom] == nil {
+						s.abortShardTransfer(s.ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+					} else {
+						hasInProgressShards = true
+					}
+				}
+				collections[collection].ShardsInProgress = hasInProgressShards
 			}
 
 			cluster.Status.Collections = collections
@@ -175,7 +201,7 @@ func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) 
 	return collections, nil
 }
 
-func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress bool, err error) {
+func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress []*qdrant.ShardTransferInfo, err error) {
 	client := qdrant.NewCollectionsClient(conn)
 	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
 	defer cancel()
@@ -184,7 +210,7 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 	})
 	if err != nil {
 		s.log.Error(err, "unable to list shards")
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	shards = map[string]qdrantv1alpha1.ShardsList{}
@@ -207,10 +233,7 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 			return cmp.Compare(*a.ShardId, *b.ShardId)
 		})
 	}
-	if len(clusterInfoResponse.ShardTransfers) > 0 {
-		shardsInProgress = true
-	}
-	return shards, shardsInProgress, nil
+	return shards, clusterInfoResponse.ShardTransfers, nil
 }
 
 func (s *StatusHandler) getCollectionInfo(conn *grpc.ClientConn, collectionName string) (*qdrant.CollectionInfo, error) {
@@ -237,4 +260,23 @@ func (s *StatusHandler) getGrpcConnection(url string) *grpc.ClientConn {
 		s.grpcConnections[url] = conn
 	}
 	return s.grpcConnections[url]
+}
+
+func (s *StatusHandler) abortShardTransfer(ctx context.Context, conn *grpc.ClientConn, collectionName string, fromPeerId uint64, toPeerId uint64, shardId uint32) {
+	client := qdrant.NewCollectionsClient(conn)
+	_, err := client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+		CollectionName: collectionName,
+		Operation: &qdrant.UpdateCollectionClusterSetupRequest_AbortTransfer{
+			AbortTransfer: &qdrant.AbortShardTransfer{
+				FromPeerId: fromPeerId,
+				ToPeerId:   toPeerId,
+				ShardId:    shardId,
+			},
+		},
+	})
+	if err != nil {
+		s.log.Error(err, "unable to move shards")
+		return
+	}
+	s.log.Info("Shard transfer aborted.")
 }

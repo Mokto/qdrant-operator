@@ -60,12 +60,28 @@ func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log lo
 
 	leader := obj.Status.Peers.GetLeader()
 	if leader != nil {
+		dns := leader.DNS
+		if !leader.IsReady || leader.EphemeralStorage {
+			for _, peer := range obj.Status.Peers {
+				if peer.IsReady && !peer.EphemeralStorage {
+					dns = peer.DNS
+					break
+				}
+			}
+		}
 		config = `
 #!/bin/sh
-LEADER=http://` + leader.DNS + `:6335
+LEADER=http://` + dns + `:6335
 SELF=http://$HOSTNAME.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335
 echo "Leader is $LEADER. Self is $SELF"
-exec ./entrypoint.sh --bootstrap $LEADER --uri $SELF
+if [[ "$LEADER" == "$SELF" ]]; then
+	echo "Leader is self. Waiting for a new leader to be elected and restarting the pod."
+	sleep 5
+	exit 0
+else
+	exec ./entrypoint.sh --bootstrap $LEADER --uri $SELF
+fi
+
 `
 		// exec ./entrypoint.sh --bootstrap 'http://` + leader.DNS + `:6335' --uri 'http://'"$HOSTNAME"'.` + obj.GetHeadlessServiceName() + `.` + obj.GetNamespace() + `:6335'
 	}

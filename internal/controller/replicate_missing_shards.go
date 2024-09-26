@@ -19,14 +19,13 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 		for shardNumber := range collection.ShardNumber {
 			shardsFromId := collection.Shards.GetShardsPerId(shardNumber)
 			if len(shardsFromId) < int(collection.ReplicationFactor) {
-				log.Info(fmt.Sprintf("Shard %d is missing on some peers", shardNumber))
 				peerIdsWithShard := []string{}
 				for _, shard := range shardsFromId {
 					peerIdsWithShard = append(peerIdsWithShard, strconv.FormatUint(shard.PeerId, 10))
 				}
 
-				for peerId := range obj.Status.Collections[collectionName].Shards {
-					if !slices.Contains(peerIdsWithShard, peerId) {
+				for peerId := range obj.Status.Peers {
+					if !slices.Contains(peerIdsWithShard, peerId) && obj.Status.Peers[peerId].IsReady {
 						log.Info(fmt.Sprintf("Replicating shard %d to %s", shardNumber, peerId))
 						hasDuplicatedShards = true
 						conn, err := grpc.NewClient(obj.Status.Peers[peerId].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))

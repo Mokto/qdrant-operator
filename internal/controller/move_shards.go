@@ -19,15 +19,9 @@ import (
 func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 
 	for collectionName, collection := range obj.Status.Collections {
-		if collection.Status != qdrant.CollectionStatus_Green.String() {
-			log.Info(collectionName + " is not ready to be optimized (status " + collection.Status + "). Skipping.")
+		if collection.ShardsInProgress || obj.Status.Peers.AllReady() || collection.Status != qdrant.CollectionStatus_Green.String() {
 			continue
 		}
-		if collection.ShardsInProgress {
-			log.Info(collectionName + " has shards in progress. Skipping.")
-			continue
-		}
-
 		isCordoning := len(obj.Status.CordonedPeerIds) > 0
 
 		totalShardCount := collection.ShardNumber * collection.ReplicationFactor

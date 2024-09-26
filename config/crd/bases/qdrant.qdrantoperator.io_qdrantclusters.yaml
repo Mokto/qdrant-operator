@@ -1162,6 +1162,8 @@ spec:
                   properties:
                     dns:
                       type: string
+                    ephemeralStorage:
+                      type: boolean
                     isLeader:
                       type: boolean
                     isReady:
@@ -1169,8 +1171,6 @@ spec:
                     podName:
                       type: string
                     statefulSetName:
-                      type: string
-                    status:
                       type: string
                   type: object
                 description: 'Important: Run "make" to regenerate code after modifying
