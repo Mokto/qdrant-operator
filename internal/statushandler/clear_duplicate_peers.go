@@ -10,6 +10,11 @@ import (
 )
 
 func (s *StatusHandler) clearDuplicatePeers(cluster *qdrantv1alpha1.QdrantCluster) (hasDoneAnything bool, err error) {
+	/**
+	* This is addressing localstorage nodes that could be join the cluster with the same DNS
+	* The watcher (watch remove peers) is supposed to handle that earlier but this would be used
+	* in case the controller is down when the pod restarts
+	 */
 	peerDnsToId := map[string]string{}
 	peersDnsToIds := map[string][]string{}
 	for peerId, peer := range cluster.Status.Peers {

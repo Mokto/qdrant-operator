@@ -21,6 +21,10 @@ type Collection struct {
 	ShardsInProgress  bool          `json:"shardsInProgress,omitempty"`
 }
 
+func (collection *Collection) IsIdle() bool {
+	return collection.ShardsInProgress || collection.Status != qdrant.CollectionStatus_Green.String()
+}
+
 type ShardInfo struct {
 	PeerId  uint64  `json:"peerId,omitempty"`
 	ShardId *uint32 `json:"shardId,omitempty"`

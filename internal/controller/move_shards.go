@@ -18,8 +18,12 @@ import (
 
 func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 
+	if !obj.Status.Peers.AllReady() {
+		return nil
+	}
+
 	for collectionName, collection := range obj.Status.Collections {
-		if collection.ShardsInProgress || obj.Status.Peers.AllReady() || collection.Status != qdrant.CollectionStatus_Green.String() {
+		if !collection.IsIdle() {
 			continue
 		}
 		isCordoning := len(obj.Status.CordonedPeerIds) > 0
@@ -86,60 +90,71 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 		if foundShardNumber != nil {
 			log.Info(fmt.Sprintf("Moving shard number: %d from %s to %s", *foundShardNumber, *from, *to))
 
-			conn, err := grpc.NewClient(obj.Status.Peers[*to].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
+			hasDoneAnything, err := r.moveShardSafely(ctx, log, collectionName, *foundShardNumber, *from, *to, obj.Status.Peers[*to].DNS)
 			if err != nil {
-				log.Error(err, "grpc.NewClient")
 				return err
 			}
-			defer conn.Close()
-
-			fromPeerId, err := strconv.ParseUint(*from, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-			toPeerId, err := strconv.ParseUint(*to, 10, 64)
-			if err != nil {
-				panic(err)
-			}
-
-			resp, err := http.Get("http://" + obj.Status.Peers[*to].DNS + ":6333/readyz")
-			if err != nil {
-				log.Error(err, "unable to get pod status")
-				continue
-			}
-
-			if resp.StatusCode == 200 {
-				client := qdrant.NewCollectionsClient(conn)
-				connectionExists, err := client.CollectionExists(ctx, &qdrant.CollectionExistsRequest{CollectionName: collectionName})
-				if err != nil {
-					log.Error(err, "unable to check if the collection exists")
-					return err
-				}
-				if connectionExists.Result.Exists {
-					_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
-						CollectionName: collectionName,
-						Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
-							MoveShard: &qdrant.MoveShard{
-								ShardId:    *foundShardNumber,
-								FromPeerId: fromPeerId,
-								ToPeerId:   toPeerId,
-								Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
-							},
-						},
-					})
-					if err != nil {
-						log.Error(err, "unable to move shards")
-						return err
-					}
-					log.Info(fmt.Sprintf("Shard %d moved from %s to %s", *foundShardNumber, *from, *to))
-				} else {
-					log.Info("Collection doesn't exist on receiving node. Skipping for now.")
-				}
-			} else {
-				log.Info("Receiving node is not ready. Skipping for now.")
+			if hasDoneAnything {
+				return nil
 			}
 		}
 
 	}
 	return nil
+}
+
+func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.Logger, collectionName string, shardId uint32, fromPeerId string, toPeerId string, toDns string) (hasDoneAnything bool, err error) {
+	conn, err := grpc.NewClient(toDns+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Error(err, "grpc.NewClient")
+		return false, err
+	}
+	defer conn.Close()
+
+	fromPeerIdUint, err := strconv.ParseUint(fromPeerId, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	toPeerIdUint, err := strconv.ParseUint(toPeerId, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	resp, err := http.Get("http://" + toDns + ":6333/readyz")
+	if err != nil {
+		log.Error(err, "unable to get pod status")
+		return false, nil
+	}
+
+	if resp.StatusCode == 200 {
+		client := qdrant.NewCollectionsClient(conn)
+		connectionExists, err := client.CollectionExists(ctx, &qdrant.CollectionExistsRequest{CollectionName: collectionName})
+		if err != nil {
+			log.Error(err, "unable to check if the collection exists")
+			return false, err
+		}
+		if connectionExists.Result.Exists {
+			_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+				CollectionName: collectionName,
+				Operation: &qdrant.UpdateCollectionClusterSetupRequest_MoveShard{
+					MoveShard: &qdrant.MoveShard{
+						ShardId:    shardId,
+						FromPeerId: fromPeerIdUint,
+						ToPeerId:   toPeerIdUint,
+						Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
+					},
+				},
+			})
+			if err != nil {
+				log.Error(err, "unable to move shards")
+				return false, err
+			}
+			log.Info(fmt.Sprintf("Shard %d moved from %s to %s", shardId, fromPeerId, toPeerId))
+		} else {
+			log.Info("Collection doesn't exist on receiving node. Skipping for now.")
+		}
+	} else {
+		log.Info("Receiving node is not ready. Skipping for now.")
+	}
+	return true, nil
 }

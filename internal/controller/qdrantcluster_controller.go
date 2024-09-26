@@ -100,24 +100,34 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if obj.Status.Peers.GetLeader() == nil {
 		return ctrl.Result{}, nil
 	}
-	err = r.clearEmptyNodes(ctx, log, obj)
+	err = r.clearEmptyNodesFromScaleDown(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to clear empty nodes")
 		return ctrl.Result{}, err
 	}
 
-	hasDuplicatedShards, err := r.replicateMissingShards(ctx, log, obj)
+	hasReplicatedShards, err := r.replicateMissingShards(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to duplicate shards")
 		return ctrl.Result{}, err
 	}
+	if hasReplicatedShards {
+		return ctrl.Result{}, nil
+	}
 
-	if !hasDuplicatedShards {
-		err = r.moveShards(ctx, log, obj)
-		if err != nil {
-			log.Error(err, "unable to trigger moving shards")
-			return ctrl.Result{}, err
-		}
+	hasMovedShards, err := r.ensureShardsSafe(ctx, log, obj)
+	if err != nil {
+		log.Error(err, "unable to move shards to main nodes")
+		return ctrl.Result{}, err
+	}
+	if hasMovedShards {
+		return ctrl.Result{}, nil
+	}
+
+	err = r.moveShards(ctx, log, obj)
+	if err != nil {
+		log.Error(err, "unable to trigger moving shards")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil

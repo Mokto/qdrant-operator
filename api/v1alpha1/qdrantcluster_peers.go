@@ -27,6 +27,14 @@ func (peers *Peers) AllReady() bool {
 	}
 	return true
 }
+func (peers *Peers) HasEphemeralStorage() bool {
+	for _, peer := range *peers {
+		if peer.EphemeralStorage {
+			return true
+		}
+	}
+	return false
+}
 
 func (peers *Peers) FindPeerId(podName string) string {
 	for peerId, peer := range *peers {

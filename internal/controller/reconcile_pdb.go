@@ -10,16 +10,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
-	"qdrantoperator.io/operator/internal/qdrant"
 )
 
 func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, _ logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	maxUnavailable := int32(1)
 	for _, collection := range obj.Status.Collections {
-		if collection.Status != qdrant.CollectionStatus_Green.String() {
+		if !collection.IsIdle() {
 			maxUnavailable = 0
 			break
 		}
+	}
+	if len(obj.Status.CordonedPeerIds) > 0 || !obj.Status.Peers.AllReady() {
+		maxUnavailable = 0
 	}
 	pdb := &v1policy.PodDisruptionBudget{
 		ObjectMeta: v1meta.ObjectMeta{

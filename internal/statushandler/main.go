@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -159,6 +160,7 @@ func (s *StatusHandler) Run() {
 
 				hasInProgressShards := false
 				for _, shardInProgress := range shardInProgress {
+					fmt.Println(shardInProgress)
 					peerIdTo := strconv.FormatUint(shardInProgress.To, 10)
 					peerIdFrom := strconv.FormatUint(shardInProgress.From, 10)
 					if cluster.Status.Peers[peerIdTo] == nil {
