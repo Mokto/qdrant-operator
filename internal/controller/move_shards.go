@@ -73,6 +73,23 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 			for _, belowPeerId := range belowPeerIds {
 				for shardNumber := range collection.ShardNumber {
 					shardsFromId := collection.Shards.GetShardsPerId(shardNumber)
+					// we make sure that there will be at least 1 replicas on non ephemeral
+					// if it's sent to ephemeral storage
+					if obj.Status.Peers[abovePeerId].EphemeralStorage {
+						allOnEphemeral := true
+						for _, shard := range shardsFromId {
+							if strconv.FormatUint(shard.PeerId, 10) == belowPeerId {
+								continue
+							}
+							if !obj.Status.Peers[strconv.FormatUint(shard.PeerId, 10)].EphemeralStorage {
+								allOnEphemeral = false
+								break
+							}
+						}
+						if allOnEphemeral {
+							continue
+						}
+					}
 					// If the shard is on the above peer but not on the below peer, we can move it!
 					if shardsFromId.AllActive() && shardsFromId.HasShardFromPeer(abovePeerId) && !shardsFromId.HasShardFromPeer(belowPeerId) && obj.Status.Peers[belowPeerId].IsReady && obj.Status.Peers[abovePeerId].IsReady && !slices.Contains(obj.Status.CordonedPeerIds, belowPeerId) {
 						foundShardNumber = &shardNumber
