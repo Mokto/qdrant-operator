@@ -7,7 +7,6 @@ metadata:
     app.kubernetes.io/name: qdrant-operator
     control-plane: controller-manager
   name: qdrant-operator-controller-manager
-  namespace: qdrant-operator-system
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -27,7 +26,7 @@ spec:
         - --health-probe-bind-address=:8081
         command:
         - /manager
-        image: gchr.io/mokto/qdrant-operator:{{ .Chart.Version }}
+        image: ghcr.io/mokto/qdrant-operator:{{ .Chart.Version }}
         livenessProbe:
           httpGet:
             path: /healthz

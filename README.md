@@ -17,6 +17,8 @@ Qdrant-operator is an operator for Qdrant that allows:
 
 - Deploy the operator with Helm
 
+- helm install qdrant-operator -n qdrant-operator https://mokto.github.io/qdrant-operator/charts/qdrant-operator
+
 ## Install your cluster
 
 - Recommended: using Qdrant version > v1.11.5 (prior versions haven't been tested although they should work)
