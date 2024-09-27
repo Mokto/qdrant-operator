@@ -37,6 +37,8 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 		}
 		if statefulSetConfig.EphemeralStorage {
 			labels["qdrant-ephemeral-storage"] = "true"
+		} else {
+			labels["qdrant-ephemeral-storage"] = "false"
 		}
 		var volumeClaimTemplates []v1core.PersistentVolumeClaim
 		volumes := []v1core.Volume{{

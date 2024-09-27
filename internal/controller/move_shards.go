@@ -119,7 +119,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 	return nil
 }
 
-func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster, collectionName string, shardId uint32, fromPeerId string, toPeerId string, toDns string) (hasDoneAnything bool, err error) {
+func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.Logger, _ *qdrantv1alpha1.QdrantCluster, collectionName string, shardId uint32, fromPeerId string, toPeerId string, toDns string) (hasDoneAnything bool, err error) {
 	conn, err := grpc.NewClient(toDns+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Error(err, "grpc.NewClient")
