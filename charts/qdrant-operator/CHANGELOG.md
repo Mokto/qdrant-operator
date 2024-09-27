@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.1...qdrant-operator-v0.3.2) (2024-09-27)
+
+
+### Bug Fixes
+
+* inter namespace connection ([b88b260](https://github.com/Mokto/qdrant-operator/commit/b88b260c50492c6f592382d54b5c81729c8a546e))
+* qdrant operator permission & image ([52c095e](https://github.com/Mokto/qdrant-operator/commit/52c095e40392952116e95ceb20ae32838d39117e))
+
 ## [0.3.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.0...qdrant-operator-v0.3.1) (2024-09-27)
 
 
