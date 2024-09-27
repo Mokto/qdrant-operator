@@ -22,7 +22,7 @@ type Collection struct {
 }
 
 func (collection *Collection) IsIdle() bool {
-	return collection.ShardsInProgress || collection.Status != qdrant.CollectionStatus_Green.String()
+	return !collection.ShardsInProgress && collection.Status == qdrant.CollectionStatus_Green.String()
 }
 
 type ShardInfo struct {
