@@ -30,7 +30,7 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/Mokto/qdrant-operator:latest
+          tags: ghcr.io/mokto/qdrant-operator:latest,ghcr.io/mokto/qdrant-operator:${{ github.ref_name }}
 
       
   build-push:
