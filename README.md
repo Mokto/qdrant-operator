@@ -21,9 +21,9 @@ Qdrant-operator is an operator for Qdrant that allows:
 
 - Recommended: using Qdrant version > v1.11.5 (prior versions haven't been tested although they should work)
 
-- Start a cluster like this (this is just an example, feel free to adjust it to you r needs):
+- Start a cluster like this (this is just an example, feel free to adjust it to your needs):
 
-```
+```yaml
 kind: QdrantCluster
 apiVersion: qdrant.qdrantoperator.io/v1alpha1
 metadata:
