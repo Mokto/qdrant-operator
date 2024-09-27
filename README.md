@@ -84,6 +84,8 @@ spec:
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
+!!! If you change the Specs please run `make build-installer` and update in the helm charts
+
 ## License
 
 Copyright 2024.
