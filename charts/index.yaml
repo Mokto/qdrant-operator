@@ -3,24 +3,6 @@ entries:
   qdrant-operator:
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-09-27T09:43:54.179493473Z"
-    description: Qdrant-operator is an operator for Qdrant
-    digest: 092aaf07cba08021b189a8cc8215ada35522197b77da3e7a7ee683abc5cc964c
-    home: https://github.com/Mokto/qdrant-operator
-    keywords:
-    - qdrant
-    - database
-    - operator
-    maintainers:
-    - name: Mokto
-    name: qdrant-operator
-    sources:
-    - https://github.com/Mokto/qdrant-operator
-    urls:
-    - https://mokto.github.io/qdrant-operator/qdrant-operator-0.5.0.tgz
-    version: 0.5.0
-  - apiVersion: v1
-    appVersion: 0.5.0
     created: "2024-09-27T09:43:54.1791398Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 9d4c6a2e81a0f165c7387a944c691f69ee7cb8af8e79a410a90ac41f2917a57e
