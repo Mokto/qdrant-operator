@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.2...qdrant-operator-v0.3.3) (2024-09-27)
+
+
+### Bug Fixes
+
+* memory requests ([1d74c65](https://github.com/Mokto/qdrant-operator/commit/1d74c65aaced9b0f342555792d1273116f8501f1))
+
 ## [0.3.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.1...qdrant-operator-v0.3.2) (2024-09-27)
 
 
