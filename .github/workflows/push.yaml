@@ -34,7 +34,7 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/mokto/qdrant-operator:latest,ghcr.io/mokto/qdrant-operator:${VERSION}
+          tags: ghcr.io/mokto/qdrant-operator:latest,ghcr.io/mokto/qdrant-operator:${{ env.VERSION }}
 
       
   build-push:
