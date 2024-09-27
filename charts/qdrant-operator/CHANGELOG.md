@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.0...qdrant-operator-v0.3.1) (2024-09-27)
+
+
+### Bug Fixes
+
+* env building ([a8d357c](https://github.com/Mokto/qdrant-operator/commit/a8d357ca44869f0fee24c9835b8e920996352852))
+
 ## [0.3.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.2.0...qdrant-operator-v0.3.0) (2024-09-27)
 
 
