@@ -43,6 +43,7 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 func (s *StatusHandler) Run() {
 
 	go s.watchAndRemoveDeletedPeers()
+	go s.checkForConsensusThreadStatus()
 
 	shouldSleep := true
 	for {
@@ -62,10 +63,6 @@ func (s *StatusHandler) Run() {
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			serviceName := cluster.GetServiceName()
-			// leader := cluster.Status.Peers.GetLeader()
-			// if cluster.Status.Peers.GetLeader() != nil {
-			// 	serviceName = leader.DNS
-			// }
 
 			// Getting peers from main service endpoint
 			peers := qdrantv1alpha1.Peers{}
@@ -111,7 +108,7 @@ func (s *StatusHandler) Run() {
 			}
 
 			if peers.GetLeader() == nil {
-				s.log.Error(errors.New("leader not found"), "Leader not found")
+				s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers", len(peers)))
 				continue
 			}
 			cluster.Status.Peers = peers

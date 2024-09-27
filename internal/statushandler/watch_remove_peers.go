@@ -20,7 +20,9 @@ func (s *StatusHandler) watchAndRemoveDeletedPeers() {
 	if err != nil {
 		panic(err)
 	}
-	watcher, err := clientset.CoreV1().Pods("").Watch(context.Background(), v1.ListOptions{})
+	watcher, err := clientset.CoreV1().Pods("").Watch(context.Background(), v1.ListOptions{
+		LabelSelector: "qdrant-ephemeral-storage",
+	})
 	if err != nil {
 		s.log.Error(err, "unable to watch pods")
 		return
@@ -29,26 +31,23 @@ func (s *StatusHandler) watchAndRemoveDeletedPeers() {
 	for event := range watcher.ResultChan() {
 		item := event.Object.(*corev1.Pod)
 
-		if item.Labels["qdrant-ephemeral-storage"] != "" {
-
-			switch event.Type {
-			case watch.Modified:
-				if item.ObjectMeta.DeletionTimestamp != nil {
-					// Peer is being deleted
-				}
-			case watch.Deleted:
-				clusters := &qdrantv1alpha1.QdrantClusterList{}
-				err := s.manager.GetClient().List(s.ctx, clusters)
-				if err != nil {
-					s.log.Error(err, "unable to list QdrantClusters")
-				}
-				for _, cluster := range clusters.Items {
-					peerId := cluster.Status.Peers.FindPeerId(item.Name)
-					if peerId != "" {
-						err := s.deletePeer(&cluster, peerId)
-						if err != nil {
-							s.log.Error(err, "unable to delete peer")
-						}
+		switch event.Type {
+		case watch.Modified:
+			if item.ObjectMeta.DeletionTimestamp != nil {
+				// Peer is being deleted
+			}
+		case watch.Deleted:
+			clusters := &qdrantv1alpha1.QdrantClusterList{}
+			err := s.manager.GetClient().List(s.ctx, clusters)
+			if err != nil {
+				s.log.Error(err, "unable to list QdrantClusters")
+			}
+			for _, cluster := range clusters.Items {
+				peerId := cluster.Status.Peers.FindPeerId(item.Name)
+				if peerId != "" {
+					err := s.deletePeer(&cluster, peerId)
+					if err != nil {
+						s.log.Error(err, "unable to delete peer")
 					}
 				}
 			}
