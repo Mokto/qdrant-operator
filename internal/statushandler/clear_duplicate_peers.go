@@ -71,7 +71,7 @@ func (s *StatusHandler) deletePeer(obj *qdrantv1alpha1.QdrantCluster, peerToDele
 	s.log.Info("Deleting peer " + peerToDelete + " from the cluster.")
 
 	client := &http.Client{}
-	req, err := http.NewRequest("DELETE", "http://"+obj.GetServiceName()+":6333/cluster/peer/"+peerToDelete+"?force=true", nil)
+	req, err := http.NewRequest("DELETE", "http://"+obj.GetServiceName()+"."+obj.Namespace+":6333/cluster/peer/"+peerToDelete+"?force=true", nil)
 	if obj.Spec.ApiKey != "" {
 		req.Header.Add("api-key", obj.Spec.ApiKey)
 	}

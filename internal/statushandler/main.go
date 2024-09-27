@@ -68,7 +68,7 @@ func (s *StatusHandler) Run() {
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			serviceName := cluster.GetServiceName()
-			bodyString, err := s.getClusterInfo(s.ctx, serviceName, cluster.Spec.ApiKey)
+			bodyString, err := s.getClusterInfo(s.ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
 			if err != nil {
 				s.log.Error(err, "unable to get cluster info")
 				continue
@@ -120,7 +120,7 @@ func (s *StatusHandler) Run() {
 				shouldSleep = false
 			}
 
-			conn := s.getGrpcConnection(cluster.GetServiceName() + ":6334")
+			conn := s.getGrpcConnection(cluster.GetServiceName() + "." + cluster.Namespace + ":6334")
 			if conn == nil {
 				// error is already logged
 				continue
