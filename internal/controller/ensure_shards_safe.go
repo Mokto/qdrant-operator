@@ -10,7 +10,7 @@ import (
 )
 
 func (r *QdrantClusterReconciler) ensureShardsSafe(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (hasDoneAnything bool, err error) {
-	if !obj.Status.Peers.HasEphemeralStorage() {
+	if !obj.Status.Peers.HasEphemeralStorage() || !obj.Status.Peers.AllNonEphemeralReady() {
 		return
 	}
 
