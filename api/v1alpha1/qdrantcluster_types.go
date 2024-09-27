@@ -37,7 +37,9 @@ type QdrantClusterSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +required
+	ApiKey           string                        `json:"apiKey,omitempty"`
 	Image            string                        `json:"image,omitempty"`
+	Config           string                        `json:"config,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty" patchStrategy:"merge" patchMergeKey:"name"`
 	Statefulsets     []StatefulSet                 `json:"statefulsets,omitempty"`
 }
@@ -49,7 +51,6 @@ type QdrantClusterStatus struct {
 	Collections Collections `json:"collections,omitempty"`
 	// When the cluster is draining, no new writes are allowed and shards are moved out of the node.
 	CordonedPeerIds []string `json:"cordonedPeerIds,omitempty"`
-	// DesiredReplicasPerStatefulSet map[string]*int32 `json:"desiredReplicasPerStatefulset,omitempty"`
 }
 
 // func (status *QdrantClusterStatus) SetDesiredReplicasPerStatefulSet(statefulsetName string, replicas int32) *Peer {

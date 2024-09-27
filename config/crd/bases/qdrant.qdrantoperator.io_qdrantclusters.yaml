@@ -39,6 +39,10 @@ spec:
           spec:
             description: QdrantClusterSpec defines the desired state of QdrantCluster
             properties:
+              apiKey:
+                type: string
+              config:
+                type: string
               image:
                 type: string
               imagePullSecrets:
@@ -1114,7 +1118,7 @@ spec:
                   type: object
                 type: array
             required:
-            - image
+            - apiKey
             type: object
           status:
             description: QdrantClusterStatus defines the observed state of QdrantCluster

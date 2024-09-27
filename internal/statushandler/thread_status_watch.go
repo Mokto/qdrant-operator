@@ -1,8 +1,6 @@
 package statushandler
 
 import (
-	"io"
-	"net/http"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -37,7 +35,7 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 				if !peer.EphemeralStorage {
 					continue
 				}
-				threadStatus, raftTerm, raftCommit, err := s.getConsensusThreadStatus(peer.DNS)
+				threadStatus, raftTerm, raftCommit, err := s.getConsensusThreadStatus(peer.DNS, cluster.Spec.ApiKey)
 				if err != nil {
 					s.log.Error(err, "unable to get consensus thread status")
 					continue
@@ -53,7 +51,7 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 				if raftTerm == 0 && raftCommit == 0 {
 					s.log.Info("raftTerm and raftCommit are 0 for peer " + peer.DNS + ". Waiting 30s and killing the pod if that still the case")
 					time.Sleep(15 * time.Second)
-					_, raftTerm, raftCommit, err = s.getConsensusThreadStatus(peer.DNS)
+					_, raftTerm, raftCommit, err = s.getConsensusThreadStatus(peer.DNS, cluster.Spec.ApiKey)
 					if err != nil {
 						s.log.Error(err, "unable to get consensus thread status")
 						continue
@@ -73,20 +71,12 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 	}
 }
 
-func (s *StatusHandler) getConsensusThreadStatus(serviceName string) (status string, raftTerm uint64, raftCommit uint64, err error) {
-
-	resp, err := http.Get("http://" + serviceName + ":6333/cluster")
+func (s *StatusHandler) getConsensusThreadStatus(serviceName string, apiKey string) (status string, raftTerm uint64, raftCommit uint64, err error) {
+	bodyString, err := s.getClusterInfo(s.ctx, serviceName, apiKey)
 	if err != nil {
 		s.log.Error(err, "unable to get cluster info")
 		return "", 0, 0, err
 	}
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		s.log.Error(err, "unable to read response body")
-		return "", 0, 0, err
-	}
-	resp.Body.Close()
-	bodyString := string(body)
 
 	return gjson.Get(bodyString, "result.consensus_thread_status.consensus_thread_status").String(), gjson.Get(bodyString, "result.raft_info.term").Uint(), gjson.Get(bodyString, "result.raft_info.commit").Uint(), nil
 }

@@ -2,7 +2,6 @@ package statushandler
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/tidwall/gjson"
@@ -33,7 +32,7 @@ func (s *StatusHandler) clearDuplicatePeers(cluster *qdrantv1alpha1.QdrantCluste
 		// Get unique elements from the slice
 		ids = uniqueStrings(ids)
 		fmt.Println(ids)
-		resp, err := http.Get("http://" + dns + ":6333/cluster")
+		bodyString, err := s.getClusterInfo(s.ctx, dns, cluster.Spec.ApiKey)
 		if err != nil {
 			s.log.Info("unable to get cluster info. Deleting all peers with the same DNS.")
 			for _, id := range ids {
@@ -45,13 +44,6 @@ func (s *StatusHandler) clearDuplicatePeers(cluster *qdrantv1alpha1.QdrantCluste
 			}
 			return true, nil
 		}
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			s.log.Error(err, "unable to read response body")
-			return false, err
-		}
-		resp.Body.Close()
-		bodyString := string(body)
 
 		foundPeerId := gjson.Get(bodyString, "result.peer_id").String()
 
@@ -80,6 +72,9 @@ func (s *StatusHandler) deletePeer(obj *qdrantv1alpha1.QdrantCluster, peerToDele
 
 	client := &http.Client{}
 	req, err := http.NewRequest("DELETE", "http://"+obj.GetServiceName()+":6333/cluster/peer/"+peerToDelete+"?force=true", nil)
+	if obj.Spec.ApiKey != "" {
+		req.Header.Add("api-key", obj.Spec.ApiKey)
+	}
 	if err != nil {
 		return err
 	}

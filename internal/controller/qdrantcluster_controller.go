@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	"google.golang.org/grpc/metadata"
 	v1 "k8s.io/api/apps/v1"
 	v1core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,6 +64,10 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "unable to fetch QdrantCluster")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if obj.Spec.ApiKey != "" {
+		ctx = metadata.AppendToOutgoingContext(ctx, "api-key", obj.Spec.ApiKey)
 	}
 
 	checksum, err := r.reconcileConfigmap(ctx, log, obj)

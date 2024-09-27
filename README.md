@@ -15,9 +15,62 @@ Qdrant-operator is an operator for Qdrant that allows:
 
 ## Getting Started
 
+- Recommended: using Qdrant version > v1.11.5 (prior versions haven't been tested)
+
+- Deploy the operator with Helm
+
+- Start a cluster like this (this is just an example, feel free to adjust it to you r needs):
+
+```
+kind: QdrantCluster
+apiVersion: qdrant.qdrantoperator.io/v1alpha1
+metadata:
+  name: qdrant
+spec:
+    image: "qdrant/qdrant:v1.11.5"
+    apiKey: myapikey # optional
+    config: | # set the config that you like
+      storage:
+        async_scorer: true
+        snapshots_config:
+          snapshots_storage: s3
+      optimizers:
+        default_segment_number: 15
+        max_optimization_threads: 8
+    statefulsets: 
+    - replicas: 2
+      name: main
+      volumeClaim:
+        storageClassName: gp3
+        storage: 1Gi
+      priorityClassName: "critical"
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "100m"
+
+    ## Optional: if you want to deploy ephemeral storage
+    - replicas: 10
+      name: nvme
+      ephemeralStorage: true # mark this on the statefulset so that the operator can handle restarting the pods
+      resources:
+        requests:
+          memory: "6Gi"
+          cpu: "1"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvme
+                operator: Exists
+      tolerations:
+        - key: "nvme"
+          operator: "Exists"
+          effect: "NoSchedule"
 
 
-### To Deploy on the cluster
+```
 
 
 ## Contributing

@@ -33,6 +33,9 @@ func (r *QdrantClusterReconciler) clearEmptyNodesFromScaleDown(_ context.Context
 
 			client := &http.Client{}
 			req, err := http.NewRequest("DELETE", "http://"+obj.GetServiceName()+":6333/cluster/peer/"+peerId+"?force=true", nil)
+			if obj.Spec.ApiKey != "" {
+				req.Header.Add("api-key", obj.Spec.ApiKey)
+			}
 			if err != nil {
 				return err
 			}

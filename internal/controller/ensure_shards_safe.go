@@ -50,7 +50,7 @@ func (r *QdrantClusterReconciler) ensureShardsSafe(ctx context.Context, log logr
 					}
 				}
 
-				hasDoneAnything, err = r.moveShardSafely(ctx, log, collectionName, shardNumber, strconv.FormatUint(bestCandidateForShardFrom, 10), bestCandidateForShardTo, obj.Status.Peers[bestCandidateForShardTo].DNS)
+				hasDoneAnything, err = r.moveShardSafely(ctx, log, obj, collectionName, shardNumber, strconv.FormatUint(bestCandidateForShardFrom, 10), bestCandidateForShardTo, obj.Status.Peers[bestCandidateForShardTo].DNS)
 				if err != nil {
 					return
 				}

@@ -64,6 +64,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 		slices.SortFunc(abovePeerIds, func(a, b string) int {
 			return cmp.Compare(shardsPerPeer[a], shardsPerPeer[b])
 		})
+
 		// Findind the best pair of peers to move shards between
 		var foundShardNumber *uint32
 		var from *string
@@ -75,10 +76,10 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 					shardsFromId := collection.Shards.GetShardsPerId(shardNumber)
 					// we make sure that there will be at least 1 replicas on non ephemeral
 					// if it's sent to ephemeral storage
-					if obj.Status.Peers[abovePeerId].EphemeralStorage {
+					if obj.Status.Peers[belowPeerId].EphemeralStorage {
 						allOnEphemeral := true
 						for _, shard := range shardsFromId {
-							if strconv.FormatUint(shard.PeerId, 10) == belowPeerId {
+							if strconv.FormatUint(shard.PeerId, 10) == abovePeerId {
 								continue
 							}
 							if !obj.Status.Peers[strconv.FormatUint(shard.PeerId, 10)].EphemeralStorage {
@@ -105,9 +106,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 		}
 
 		if foundShardNumber != nil {
-			log.Info(fmt.Sprintf("Moving shard number: %d from %s to %s", *foundShardNumber, *from, *to))
-
-			hasDoneAnything, err := r.moveShardSafely(ctx, log, collectionName, *foundShardNumber, *from, *to, obj.Status.Peers[*to].DNS)
+			hasDoneAnything, err := r.moveShardSafely(ctx, log, obj, collectionName, *foundShardNumber, *from, *to, obj.Status.Peers[*to].DNS)
 			if err != nil {
 				return err
 			}
@@ -120,7 +119,7 @@ func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logge
 	return nil
 }
 
-func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.Logger, collectionName string, shardId uint32, fromPeerId string, toPeerId string, toDns string) (hasDoneAnything bool, err error) {
+func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster, collectionName string, shardId uint32, fromPeerId string, toPeerId string, toDns string) (hasDoneAnything bool, err error) {
 	conn, err := grpc.NewClient(toDns+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Error(err, "grpc.NewClient")

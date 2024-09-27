@@ -16,6 +16,7 @@ import (
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 	"qdrantoperator.io/operator/internal/qdrant"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,24 +61,21 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
+			ctx := context.Background()
+			if cluster.Spec.ApiKey != "" {
+				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
+			}
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			serviceName := cluster.GetServiceName()
-
-			// Getting peers from main service endpoint
-			peers := qdrantv1alpha1.Peers{}
-			resp, err := http.Get("http://" + serviceName + ":6333/cluster")
+			bodyString, err := s.getClusterInfo(s.ctx, serviceName, cluster.Spec.ApiKey)
 			if err != nil {
 				s.log.Error(err, "unable to get cluster info")
 				continue
 			}
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				s.log.Error(err, "unable to read response body")
-				continue
-			}
-			resp.Body.Close()
-			bodyString := string(body)
+
+			// Getting peers from main service endpoint
+			peers := qdrantv1alpha1.Peers{}
 
 			leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
 			for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
@@ -127,7 +125,7 @@ func (s *StatusHandler) Run() {
 				// error is already logged
 				continue
 			}
-			collectionsList, err := s.getCollections(conn)
+			collectionsList, err := s.getCollections(ctx, conn)
 			if err != nil {
 				s.log.Error(err, "unable to get collections")
 				continue
@@ -137,7 +135,7 @@ func (s *StatusHandler) Run() {
 			for _, collection := range collectionsList {
 				collections[collection] = &qdrantv1alpha1.Collection{}
 
-				collectionInfo, err := s.getCollectionInfo(conn, collection)
+				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
 				if err != nil {
 					continue
 				}
@@ -149,7 +147,7 @@ func (s *StatusHandler) Run() {
 				}
 				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
 
-				shards, shardInProgress, err := s.getShardsInfo(conn, collection)
+				shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
 				if err != nil {
 					continue
 				}
@@ -185,10 +183,10 @@ func (s *StatusHandler) Run() {
 	}
 }
 
-func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) {
+func (s *StatusHandler) getCollections(ctx context.Context, conn *grpc.ClientConn) ([]string, error) {
 	collections := []string{}
 	client := qdrant.NewCollectionsClient(conn)
-	collectionsResponse, err := client.List(s.ctx, &qdrant.ListCollectionsRequest{})
+	collectionsResponse, err := client.List(ctx, &qdrant.ListCollectionsRequest{})
 
 	if err != nil {
 		s.log.Error(err, "unable to list collections")
@@ -200,9 +198,9 @@ func (s *StatusHandler) getCollections(conn *grpc.ClientConn) ([]string, error) 
 	return collections, nil
 }
 
-func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress []*qdrant.ShardTransferInfo, err error) {
+func (s *StatusHandler) getShardsInfo(ctx context.Context, conn *grpc.ClientConn, collectionName string) (shards map[string]qdrantv1alpha1.ShardsList, shardsInProgress []*qdrant.ShardTransferInfo, err error) {
 	client := qdrant.NewCollectionsClient(conn)
-	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
 	clusterInfoResponse, err := client.CollectionClusterInfo(ctx, &qdrant.CollectionClusterInfoRequest{
 		CollectionName: collectionName,
@@ -235,9 +233,9 @@ func (s *StatusHandler) getShardsInfo(conn *grpc.ClientConn, collectionName stri
 	return shards, clusterInfoResponse.ShardTransfers, nil
 }
 
-func (s *StatusHandler) getCollectionInfo(conn *grpc.ClientConn, collectionName string) (*qdrant.CollectionInfo, error) {
+func (s *StatusHandler) getCollectionInfo(ctx context.Context, conn *grpc.ClientConn, collectionName string) (*qdrant.CollectionInfo, error) {
 	client := qdrant.NewCollectionsClient(conn)
-	ctx, cancel := context.WithTimeout(s.ctx, 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 	defer cancel()
 	clusterInfoResponse, err := client.Get(ctx, &qdrant.GetCollectionInfoRequest{
 		CollectionName: collectionName,
@@ -278,4 +276,24 @@ func (s *StatusHandler) abortShardTransfer(ctx context.Context, conn *grpc.Clien
 		return
 	}
 	s.log.Info("Shard transfer aborted.")
+}
+
+func (s *StatusHandler) getClusterInfo(_ context.Context, dns string, apiKey string) (string, error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", "http://"+dns+":6333/cluster", nil)
+	if apiKey != "" {
+		req.Header.Set("api-key", apiKey)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		s.log.Error(err, "unable to get cluster info")
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.log.Error(err, "unable to read response body")
+		return "", err
+	}
+	return string(body), nil
 }
