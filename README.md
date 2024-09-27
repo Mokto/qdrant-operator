@@ -6,18 +6,20 @@ Qdrant-operator is an operator for Qdrant that allows:
 - Graceful scaling down (will move all shards out of a node before scaling down)
 - Supports multi stateful set
     - that way you can support one set on normal storage and one on localstorage for optimal performances/price for example.
-    - also makes sure there is 1 replica of each shard not on localstorage to avoid data loss
+    - also the operator makes sure there is 1 replica of each shard not on localstorage to avoid data loss
 
 
 
 
 
 
-## Getting Started
-
-- Recommended: using Qdrant version > v1.11.5 (prior versions haven't been tested)
+## Install the operator
 
 - Deploy the operator with Helm
+
+## Install your cluster
+
+- Recommended: using Qdrant version > v1.11.5 (prior versions haven't been tested although they should work)
 
 - Start a cluster like this (this is just an example, feel free to adjust it to you r needs):
 
@@ -72,6 +74,9 @@ spec:
 
 ```
 
+- Feel free to change the statefulsets as you wish although you should note:
+  - At the moment the operator doesn't delete statefulset if they are not part of the Custom resource anymore. It's instead recommended to use 0 as a replica value
+  - You can edit replicas, resources, etc.. but don't change ephemeralStorage or volumeClaim values. It's untested and will probably break something. We will add some validation in the future to prevent those changes.
 
 ## Contributing
 
