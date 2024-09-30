@@ -61,6 +61,7 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
+			cluster.Status.UnknownStatus = false
 			ctx := context.Background()
 			if cluster.Spec.ApiKey != "" {
 				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
@@ -137,6 +138,7 @@ func (s *StatusHandler) Run() {
 
 				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
 				if err != nil {
+					cluster.Status.UnknownStatus = true
 					continue
 				}
 				collections[collection].Status = collectionInfo.Status.String()
@@ -149,6 +151,7 @@ func (s *StatusHandler) Run() {
 
 				shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
 				if err != nil {
+					cluster.Status.UnknownStatus = true
 					continue
 				}
 				collections[collection].Shards = shards

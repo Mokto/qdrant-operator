@@ -15,7 +15,7 @@ import (
 func (r *QdrantClusterReconciler) reconcilePodDisruptionBudget(ctx context.Context, _ logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 	maxUnavailable := int32(1)
 	for _, collection := range obj.Status.Collections {
-		if !collection.IsIdle() {
+		if !collection.IsIdle() || obj.Status.UnknownStatus {
 			maxUnavailable = 0
 			break
 		}

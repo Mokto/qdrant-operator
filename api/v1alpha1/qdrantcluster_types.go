@@ -47,8 +47,9 @@ type QdrantClusterSpec struct {
 // QdrantClusterStatus defines the observed state of QdrantCluster
 type QdrantClusterStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
-	Peers       Peers       `json:"peers,omitempty"`
-	Collections Collections `json:"collections,omitempty"`
+	Peers         Peers       `json:"peers,omitempty"`
+	Collections   Collections `json:"collections,omitempty"`
+	UnknownStatus bool        `json:"unknownStatus,omitempty"`
 	// When the cluster is draining, no new writes are allowed and shards are moved out of the node.
 	CordonedPeerIds []string `json:"cordonedPeerIds,omitempty"`
 }
