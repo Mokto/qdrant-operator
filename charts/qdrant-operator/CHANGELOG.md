@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.3...qdrant-operator-v0.3.4) (2024-09-30)
+
+
+### Bug Fixes
+
+* max unavailable 0 on status unknown ([988a347](https://github.com/Mokto/qdrant-operator/commit/988a347917564110906cd80d93569a10bb0378dc))
+
 ## [0.3.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.2...qdrant-operator-v0.3.3) (2024-09-27)
 
 
