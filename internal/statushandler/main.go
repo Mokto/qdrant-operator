@@ -69,7 +69,7 @@ func (s *StatusHandler) Run() {
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			serviceName := cluster.GetServiceName()
-			bodyString, err := s.getClusterInfo(s.ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
+			bodyString, err := s.getClusterInfo(ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
 			if err != nil {
 				s.log.Error(err, "unable to get cluster info")
 				continue
@@ -149,9 +149,9 @@ func (s *StatusHandler) Run() {
 					peerIdTo := strconv.FormatUint(shardInProgress.To, 10)
 					peerIdFrom := strconv.FormatUint(shardInProgress.From, 10)
 					if cluster.Status.Peers[peerIdTo] == nil {
-						s.abortShardTransfer(s.ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+						s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
 					} else if cluster.Status.Peers[peerIdFrom] == nil {
-						s.abortShardTransfer(s.ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+						s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
 					} else {
 						hasInProgressShards = true
 					}
