@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.5...qdrant-operator-v0.3.6) (2024-10-03)
+
+
+### Bug Fixes
+
+* api key ([389987a](https://github.com/Mokto/qdrant-operator/commit/389987aa3ca3ceade20d389065ebf303af2841d9))
+
 ## [0.3.5](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.4...qdrant-operator-v0.3.5) (2024-10-03)
 
 
