@@ -136,19 +136,6 @@ func (s *StatusHandler) Run() {
 			for _, collection := range collectionsList {
 				collections[collection] = &qdrantv1alpha1.Collection{}
 
-				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
-				if err != nil {
-					cluster.Status.UnknownStatus = true
-					continue
-				}
-				collections[collection].Status = collectionInfo.Status.String()
-				if collectionInfo.Config.Params.ReplicationFactor != nil {
-					collections[collection].ReplicationFactor = *collectionInfo.Config.Params.ReplicationFactor
-				} else {
-					collections[collection].ReplicationFactor = 1
-				}
-				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
-
 				shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
 				if err != nil {
 					cluster.Status.UnknownStatus = true
@@ -170,6 +157,20 @@ func (s *StatusHandler) Run() {
 					}
 				}
 				collections[collection].ShardsInProgress = hasInProgressShards
+
+				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
+				if err != nil {
+					cluster.Status.UnknownStatus = true
+					continue
+				}
+				collections[collection].Status = collectionInfo.Status.String()
+				if collectionInfo.Config.Params.ReplicationFactor != nil {
+					collections[collection].ReplicationFactor = *collectionInfo.Config.Params.ReplicationFactor
+				} else {
+					collections[collection].ReplicationFactor = 1
+				}
+				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
+
 			}
 
 			cluster.Status.Collections = collections
