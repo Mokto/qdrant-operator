@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.4...qdrant-operator-v0.3.5) (2024-10-03)
+
+
+### Bug Fixes
+
+* abort shards transfers first if needed ([64ff68f](https://github.com/Mokto/qdrant-operator/commit/64ff68fcc4eeef54fb81b0641d274a5a5e200c25))
+
 ## [0.3.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.3...qdrant-operator-v0.3.4) (2024-09-30)
 
 
