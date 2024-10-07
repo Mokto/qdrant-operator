@@ -14,7 +14,6 @@ import (
 )
 
 func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (hasDuplicatedShards bool, err error) {
-	hasDuplicatedShards = false
 	for collectionName, collection := range obj.Status.Collections {
 		for shardNumber := range collection.ShardNumber {
 			shardsFromId := collection.Shards.GetShardsPerId(shardNumber)

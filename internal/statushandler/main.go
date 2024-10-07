@@ -61,13 +61,13 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
-			cluster.Status.UnknownStatus = false
 			ctx := context.Background()
 			if cluster.Spec.ApiKey != "" {
 				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
 			}
 			patch := client.MergeFrom(cluster.DeepCopy())
 
+			cluster.Status.UnknownStatus = false
 			serviceName := cluster.GetServiceName()
 			bodyString, err := s.getClusterInfo(ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
 			if err != nil {
