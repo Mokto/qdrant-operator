@@ -52,6 +52,7 @@ type QdrantClusterStatus struct {
 	UnknownStatus bool        `json:"unknownStatus,omitempty"`
 	// When the cluster is draining, no new writes are allowed and shards are moved out of the node.
 	CordonedPeerIds []string `json:"cordonedPeerIds,omitempty"`
+	HasBeenInited   bool     `json:"hasBeenInited,omitempty"`
 }
 
 // func (status *QdrantClusterStatus) SetDesiredReplicasPerStatefulSet(statefulsetName string, replicas int32) *Peer {

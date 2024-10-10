@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"google.golang.org/grpc/metadata"
 	v1 "k8s.io/api/apps/v1"
@@ -58,12 +59,16 @@ type QdrantClusterReconciler struct {
 // +kubebuilder:rbac:groups=examples.itamar.marom,resources=qdrantclusters/finalizers,verbs=update
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;create;update;patch;delete
 func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	requeueResult := ctrl.Result{
+		RequeueAfter: time.Second * 30,
+	}
+
 	log := log.FromContext(ctx).WithValues("reconcileID", uuid.NewUUID())
 
 	obj := &qdrantv1alpha1.QdrantCluster{}
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		log.Error(err, "unable to fetch QdrantCluster")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+		return requeueResult, client.IgnoreNotFound(err)
 	}
 
 	if obj.Spec.ApiKey != "" {
@@ -73,69 +78,69 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	checksum, err := r.reconcileConfigmap(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update ConfigMap")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	err = r.reconcileService(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update Service")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	err = r.reconcileHeadlessService(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update headless Service")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	err = r.reconcilePodDisruptionBudget(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to fetch update PodDisruptionBudget")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	err = r.reconcileStatefulsets(ctx, log, obj, checksum)
 	if err != nil {
 		log.Error(err, "unable to fetch update StatefulSets")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	log.Info("Reconcilied QdrantCluster " + obj.Name)
 
 	if obj.Status.Peers.GetLeader() == nil {
-		return ctrl.Result{}, nil
+		return requeueResult, nil
 	}
 	err = r.clearEmptyNodesFromScaleDown(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to clear empty nodes")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
 	hasReplicatedShards, err := r.replicateMissingShards(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to duplicate shards")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 	if hasReplicatedShards {
-		return ctrl.Result{}, nil
+		return requeueResult, nil
 	}
 
 	hasMovedShards, err := r.ensureShardsSafe(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to move shards to main nodes")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 	if hasMovedShards {
-		return ctrl.Result{}, nil
+		return requeueResult, nil
 	}
 
 	err = r.moveShards(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to trigger moving shards")
-		return ctrl.Result{}, err
+		return requeueResult, err
 	}
 
-	return ctrl.Result{}, nil
+	return requeueResult, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

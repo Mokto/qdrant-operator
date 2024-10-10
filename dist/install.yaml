@@ -1169,6 +1169,8 @@ spec:
                 items:
                   type: string
                 type: array
+              hasBeenInited:
+                type: boolean
               peers:
                 additionalProperties:
                   properties:

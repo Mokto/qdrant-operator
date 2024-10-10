@@ -107,10 +107,11 @@ func (s *StatusHandler) Run() {
 			}
 
 			if peers.GetLeader() == nil {
-				s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers", len(peers)))
+				s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers on cluster %s", len(peers), cluster.Namespace))
 				continue
 			}
 			cluster.Status.Peers = peers
+			cluster.Status.HasBeenInited = true
 
 			hasDeletedPeers, err := s.clearDuplicatePeers(&cluster)
 			if err != nil {
