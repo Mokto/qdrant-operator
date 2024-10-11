@@ -65,6 +65,7 @@ func (s *StatusHandler) Run() {
 			if cluster.Spec.ApiKey != "" {
 				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
 			}
+			cluster.Status.HasBeenInited = false
 			patch := client.MergeFrom(cluster.DeepCopy())
 
 			cluster.Status.UnknownStatus = false
