@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.8...qdrant-operator-v0.3.9) (2024-10-11)
+
+
+### Bug Fixes
+
+* make leader election even safer ([44e6577](https://github.com/Mokto/qdrant-operator/commit/44e6577250bf66525d160e689bdc0dc4518b8fa8))
+
 ## [0.3.8](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.7...qdrant-operator-v0.3.8) (2024-10-10)
 
 
