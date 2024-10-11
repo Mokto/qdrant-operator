@@ -68,15 +68,28 @@ func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log lo
 	`
 
 	leader := obj.Status.Peers.GetLeader()
-	if leader != nil || obj.Status.HasBeenInited {
-		dns := leader.DNS
-		if !leader.IsReady || leader.EphemeralStorage {
+	if obj.Status.HasBeenInited {
+		dns := ""
+		if leader != nil && leader.IsReady && !leader.EphemeralStorage {
+			dns = leader.DNS
+		}
+		for _, peer := range obj.Status.Peers {
+			if peer.IsReady && !peer.EphemeralStorage {
+				dns = peer.DNS
+				break
+			}
+		}
+		if dns == "" {
 			for _, peer := range obj.Status.Peers {
-				if peer.IsReady && !peer.EphemeralStorage {
+				if peer.IsReady {
 					dns = peer.DNS
 					break
 				}
 			}
+		}
+		if dns == "" {
+			log.Info("No ready peers found. Not updating config")
+			return "", nil
 		}
 		config = `
 #!/bin/sh
