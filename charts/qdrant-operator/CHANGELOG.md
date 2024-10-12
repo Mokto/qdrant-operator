@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.10](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.9...qdrant-operator-v0.3.10) (2024-10-12)
+
+
+### Bug Fixes
+
+* hasbeeninited ([1fce96a](https://github.com/Mokto/qdrant-operator/commit/1fce96a9ba12111ffd8a26b62198637e48f38a53))
+* hasbeeninited ([9ac957f](https://github.com/Mokto/qdrant-operator/commit/9ac957f60b8f127d00e6195eb93cd39ae1873d3b))
+
 ## [0.3.9](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.8...qdrant-operator-v0.3.9) (2024-10-11)
 
 
