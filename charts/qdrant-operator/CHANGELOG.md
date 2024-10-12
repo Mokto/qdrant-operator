@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.4.0...qdrant-operator-v0.5.0) (2024-10-12)
+
+
+### Features
+
+* better logging ([8fb676a](https://github.com/Mokto/qdrant-operator/commit/8fb676ab7abac0f130ba82e65abd6d0e8dab8086))
+
 ## [0.4.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.11...qdrant-operator-v0.4.0) (2024-10-12)
 
 
