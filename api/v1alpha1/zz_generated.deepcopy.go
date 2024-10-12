@@ -258,6 +258,16 @@ func (in *QdrantClusterStatus) DeepCopyInto(out *QdrantClusterStatus) {
 			(*out)[key] = outVal
 		}
 	}
+	if in.UnknownStatus != nil {
+		in, out := &in.UnknownStatus, &out.UnknownStatus
+		*out = new(bool)
+		**out = **in
+	}
+	if in.HasBeenInited != nil {
+		in, out := &in.HasBeenInited, &out.HasBeenInited
+		*out = new(bool)
+		**out = **in
+	}
 	if in.CordonedPeerIds != nil {
 		in, out := &in.CordonedPeerIds, &out.CordonedPeerIds
 		*out = make([]string, len(*in))

@@ -43,6 +43,9 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 
 func (s *StatusHandler) Run() {
 
+	trueValue := true
+	falseValue := false
+
 	go s.watchAndRemoveDeletedPeers()
 	go s.checkForConsensusThreadStatus()
 
@@ -65,10 +68,9 @@ func (s *StatusHandler) Run() {
 			if cluster.Spec.ApiKey != "" {
 				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
 			}
-			cluster.Status.HasBeenInited = false
 			patch := client.MergeFrom(cluster.DeepCopy())
 
-			cluster.Status.UnknownStatus = false
+			cluster.Status.UnknownStatus = &falseValue
 			serviceName := cluster.GetServiceName()
 			bodyString, err := s.getClusterInfo(ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
 			if err != nil {
@@ -112,7 +114,7 @@ func (s *StatusHandler) Run() {
 				continue
 			}
 			cluster.Status.Peers = peers
-			cluster.Status.HasBeenInited = true
+			cluster.Status.HasBeenInited = &trueValue
 
 			hasDeletedPeers, err := s.clearDuplicatePeers(&cluster)
 			if err != nil {
@@ -120,7 +122,9 @@ func (s *StatusHandler) Run() {
 				continue
 			}
 			if hasDeletedPeers {
+				s.log.Info("Deleted duplicate peers")
 				shouldSleep = false
+				break
 			}
 
 			conn := s.getGrpcConnection(cluster.GetServiceName() + "." + cluster.Namespace + ":6334")
@@ -140,7 +144,7 @@ func (s *StatusHandler) Run() {
 
 				shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
 				if err != nil {
-					cluster.Status.UnknownStatus = true
+					cluster.Status.UnknownStatus = &trueValue
 					continue
 				}
 				collections[collection].Shards = shards
@@ -162,7 +166,7 @@ func (s *StatusHandler) Run() {
 
 				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
 				if err != nil {
-					cluster.Status.UnknownStatus = true
+					cluster.Status.UnknownStatus = &trueValue
 					continue
 				}
 				collections[collection].Status = collectionInfo.Status.String()

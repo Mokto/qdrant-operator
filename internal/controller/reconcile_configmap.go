@@ -68,7 +68,7 @@ func (r *QdrantClusterReconciler) reconcileConfigmap(ctx context.Context, log lo
 	`
 
 	leader := obj.Status.Peers.GetLeader()
-	if obj.Status.HasBeenInited {
+	if obj.Status.HasBeenInited != nil && *obj.Status.HasBeenInited {
 		dns := ""
 		if leader != nil && leader.IsReady && !leader.EphemeralStorage {
 			dns = leader.DNS
