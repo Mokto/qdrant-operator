@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.0...qdrant-operator-v0.5.1) (2024-10-12)
+
+
+### Bug Fixes
+
+* wrong docker image ([af998af](https://github.com/Mokto/qdrant-operator/commit/af998af1f2aac144fc794090732073afb5569c22))
+
 ## [0.5.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.4.0...qdrant-operator-v0.5.0) (2024-10-12)
 
 
