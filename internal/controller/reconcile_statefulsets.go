@@ -94,6 +94,106 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			LabelSelector: &v1meta.LabelSelector{MatchLabels: map[string]string{"cluster": obj.Name}},
 			TopologyKey:   "kubernetes.io/hostname",
 		}}
+		containers := []v1core.Container{{
+			Name:  "qdrant",
+			Image: obj.Spec.Image,
+			Command: []string{
+				"/bin/bash",
+				"-c",
+			},
+			Args: []string{
+				"./config/initialize.sh",
+			},
+			Env: []v1core.EnvVar{{
+				Name:  "QDRANT_INIT_FILE_PATH",
+				Value: "/qdrant/init/.qdrant-initialized",
+			}},
+			Resources: statefulSetConfig.Resources,
+			Lifecycle: &v1core.Lifecycle{
+				PreStop: &v1core.LifecycleHandler{
+					Exec: &v1core.ExecAction{
+						Command: []string{"sleep", "3"},
+					},
+				},
+			},
+			Ports: []v1core.ContainerPort{{
+				ContainerPort: 6333,
+				Name:          "http",
+				Protocol:      v1core.Protocol("TCP"),
+			}, {
+				ContainerPort: 6334,
+				Name:          "grpc",
+				Protocol:      v1core.Protocol("TCP"),
+			}, {
+				ContainerPort: 6335,
+				Name:          "p2p",
+				Protocol:      v1core.Protocol("TCP"),
+			}},
+			ReadinessProbe: &v1core.Probe{
+				FailureThreshold: 6,
+				ProbeHandler: v1core.ProbeHandler{HTTPGet: &v1core.HTTPGetAction{Path: "/readyz", Port: intstr.IntOrString{
+					IntVal: 6333,
+				}, Scheme: "HTTP"}},
+				InitialDelaySeconds: 5,
+				PeriodSeconds:       5,
+				SuccessThreshold:    1,
+				TimeoutSeconds:      1,
+			},
+			SecurityContext: &v1core.SecurityContext{
+				AllowPrivilegeEscalation: &falseValue,
+				Privileged:               &falseValue,
+				ReadOnlyRootFilesystem:   &trueValue,
+				RunAsUser:                &securityUser,
+				RunAsGroup:               &securityGroup,
+				RunAsNonRoot:             &trueValue,
+			},
+			VolumeMounts: []v1core.VolumeMount{{
+				MountPath: "/qdrant/storage",
+				Name:      "qdrant-storage",
+			}, {
+				MountPath: "/qdrant/config/initialize.sh",
+				Name:      "qdrant-config",
+				SubPath:   "initialize.sh",
+			}, {
+				MountPath: "/qdrant/config/production.yaml",
+				Name:      "qdrant-config",
+				SubPath:   "production.yaml",
+			}, {
+				MountPath: "/qdrant/snapshots",
+				Name:      "qdrant-snapshots",
+			}, {
+				MountPath: "/qdrant/init",
+				Name:      "qdrant-init",
+			}},
+		}}
+		if statefulSetConfig.EphemeralStorage {
+			containers = append(containers, v1core.Container{
+				Name:  "ready-container-check",
+				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.6.0",
+				Command: []string{
+					"sleep",
+					"315000000", // 10 years
+				},
+				Env: []v1core.EnvVar{{
+					Name:  "API_KEY",
+					Value: obj.Spec.ApiKey,
+				}},
+				StartupProbe: &v1core.Probe{
+					ProbeHandler: v1core.ProbeHandler{
+						Exec: &v1core.ExecAction{
+							Command: []string{
+								"bun", "run.js",
+							},
+						},
+					},
+					InitialDelaySeconds: 5,
+					PeriodSeconds:       30,
+					SuccessThreshold:    1,
+					FailureThreshold:    10 * 3600,
+					TimeoutSeconds:      1,
+				},
+			})
+		}
 		podTemplate := v1core.PodTemplateSpec{
 			ObjectMeta: v1meta.ObjectMeta{Labels: labels, Annotations: map[string]string{"checksum": checksum}},
 			Spec: v1core.PodSpec{
@@ -115,78 +215,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 						Name:      "qdrant-snapshots",
 					}},
 				}},
-				Containers: []v1core.Container{{
-					Name:  "qdrant",
-					Image: obj.Spec.Image,
-					Command: []string{
-						"/bin/bash",
-						"-c",
-					},
-					Args: []string{
-						"./config/initialize.sh",
-					},
-					Env: []v1core.EnvVar{{
-						Name:  "QDRANT_INIT_FILE_PATH",
-						Value: "/qdrant/init/.qdrant-initialized",
-					}},
-					Resources: statefulSetConfig.Resources,
-					Lifecycle: &v1core.Lifecycle{
-						PreStop: &v1core.LifecycleHandler{
-							Exec: &v1core.ExecAction{
-								Command: []string{"sleep", "3"},
-							},
-						},
-					},
-					Ports: []v1core.ContainerPort{{
-						ContainerPort: 6333,
-						Name:          "http",
-						Protocol:      v1core.Protocol("TCP"),
-					}, {
-						ContainerPort: 6334,
-						Name:          "grpc",
-						Protocol:      v1core.Protocol("TCP"),
-					}, {
-						ContainerPort: 6335,
-						Name:          "p2p",
-						Protocol:      v1core.Protocol("TCP"),
-					}},
-					ReadinessProbe: &v1core.Probe{
-						FailureThreshold: 6,
-						ProbeHandler: v1core.ProbeHandler{HTTPGet: &v1core.HTTPGetAction{Path: "/readyz", Port: intstr.IntOrString{
-							IntVal: 6333,
-						}, Scheme: "HTTP"}},
-						InitialDelaySeconds: 5,
-						PeriodSeconds:       5,
-						SuccessThreshold:    1,
-						TimeoutSeconds:      1,
-					},
-					SecurityContext: &v1core.SecurityContext{
-						AllowPrivilegeEscalation: &falseValue,
-						Privileged:               &falseValue,
-						ReadOnlyRootFilesystem:   &trueValue,
-						RunAsUser:                &securityUser,
-						RunAsGroup:               &securityGroup,
-						RunAsNonRoot:             &trueValue,
-					},
-					VolumeMounts: []v1core.VolumeMount{{
-						MountPath: "/qdrant/storage",
-						Name:      "qdrant-storage",
-					}, {
-						MountPath: "/qdrant/config/initialize.sh",
-						Name:      "qdrant-config",
-						SubPath:   "initialize.sh",
-					}, {
-						MountPath: "/qdrant/config/production.yaml",
-						Name:      "qdrant-config",
-						SubPath:   "production.yaml",
-					}, {
-						MountPath: "/qdrant/snapshots",
-						Name:      "qdrant-snapshots",
-					}, {
-						MountPath: "/qdrant/init",
-						Name:      "qdrant-init",
-					}},
-				}},
+				Containers:        containers,
 				PriorityClassName: statefulSetConfig.PriorityClassName,
 				NodeSelector:      statefulSetConfig.NodeSelector,
 				ImagePullSecrets:  obj.Spec.ImagePullSecrets,
