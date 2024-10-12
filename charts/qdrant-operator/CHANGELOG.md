@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.11](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.10...qdrant-operator-v0.3.11) (2024-10-12)
+
+
+### Bug Fixes
+
+* crd ([a77b447](https://github.com/Mokto/qdrant-operator/commit/a77b447b8f7350de12140dc695e725a5bdab5fab))
+
 ## [0.3.10](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.9...qdrant-operator-v0.3.10) (2024-10-12)
 
 
