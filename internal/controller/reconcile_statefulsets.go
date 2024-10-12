@@ -169,7 +169,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 		if statefulSetConfig.EphemeralStorage {
 			containers = append(containers, v1core.Container{
 				Name:  "ready-container-check",
-				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.8.0",
+				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.9.0",
 				Command: []string{
 					"sleep",
 					"315000000", // 10 years
@@ -187,7 +187,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 						},
 					},
 					InitialDelaySeconds: 5,
-					PeriodSeconds:       30,
+					PeriodSeconds:       5,
 					SuccessThreshold:    1,
 					FailureThreshold:    10 * 3600,
 					TimeoutSeconds:      1,
