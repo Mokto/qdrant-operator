@@ -3,7 +3,25 @@ entries:
   qdrant-operator:
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.057916139Z"
+    created: "2024-10-12T14:51:29.943900034Z"
+    description: Qdrant-operator is an operator for Qdrant
+    digest: 0cab171e740d73d3320c41e27d269b357ae1bebc1e31b0ba1a1497501aad5d9a
+    home: https://github.com/Mokto/qdrant-operator
+    keywords:
+    - qdrant
+    - database
+    - operator
+    maintainers:
+    - name: Mokto
+    name: qdrant-operator
+    sources:
+    - https://github.com/Mokto/qdrant-operator
+    urls:
+    - https://mokto.github.io/qdrant-operator/qdrant-operator-0.3.11.tgz
+    version: 0.3.11
+  - apiVersion: v1
+    appVersion: 0.5.0
+    created: "2024-10-12T14:51:29.94353659Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 4b47cad99fc1b84120203f0832526c83f6a2f300e65fbeb23aebea24402b1283
     home: https://github.com/Mokto/qdrant-operator
@@ -21,7 +39,7 @@ entries:
     version: 0.3.10
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.061495338Z"
+    created: "2024-10-12T14:51:29.947342469Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 3bfbe555d11238b031743244adf5dd3da7fc4aa26c7e66f6d9f7cc49bdf0d0ab
     home: https://github.com/Mokto/qdrant-operator
@@ -39,7 +57,7 @@ entries:
     version: 0.3.9
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.0611233Z"
+    created: "2024-10-12T14:51:29.946965741Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 903d14250f7e85f3d94d52f20b1899e2b7fbf8e9a89e48e6355b3f6457e9b3ee
     home: https://github.com/Mokto/qdrant-operator
@@ -57,7 +75,7 @@ entries:
     version: 0.3.8
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.060731645Z"
+    created: "2024-10-12T14:51:29.946618819Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 11943fb2642be5cfd8c06af303e1f1a3241e15d9a74223cdfe17074c3d126e0c
     home: https://github.com/Mokto/qdrant-operator
@@ -75,7 +93,7 @@ entries:
     version: 0.3.7
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.060370808Z"
+    created: "2024-10-12T14:51:29.946282196Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: f12d729e1832b8889e33d2abb1ec354f8a43864e926309e9ae201bf30ec4e26f
     home: https://github.com/Mokto/qdrant-operator
@@ -93,7 +111,7 @@ entries:
     version: 0.3.6
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.059710144Z"
+    created: "2024-10-12T14:51:29.945932037Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: b3e88d6a4a3024d1372591bd78744fdc3e0bb73ef4a613ab51d7c18cb866386d
     home: https://github.com/Mokto/qdrant-operator
@@ -111,7 +129,7 @@ entries:
     version: 0.3.5
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.058962381Z"
+    created: "2024-10-12T14:51:29.945274588Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: c97e5c11ac87ea365e4058bd06d060f8057d41a813953ed984e7aa1953604575
     home: https://github.com/Mokto/qdrant-operator
@@ -129,7 +147,7 @@ entries:
     version: 0.3.4
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.058605021Z"
+    created: "2024-10-12T14:51:29.944563832Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 7213be9e7aa2ee08bee0316b093f85492f650c0d856165fbd11059c37482fc6c
     home: https://github.com/Mokto/qdrant-operator
@@ -147,7 +165,7 @@ entries:
     version: 0.3.3
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.058265504Z"
+    created: "2024-10-12T14:51:29.944231337Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: c35441e883254de1d2816413ec0b90740dfa4a26d3aa35d8ecd6db497c976655
     home: https://github.com/Mokto/qdrant-operator
@@ -165,7 +183,7 @@ entries:
     version: 0.3.2
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.057524043Z"
+    created: "2024-10-12T14:51:29.943143842Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 485ee9b971b52ae260fd062a0fb9585f66257fc3bb6d71e77a4ec4259af7a85c
     home: https://github.com/Mokto/qdrant-operator
@@ -183,7 +201,7 @@ entries:
     version: 0.3.1
   - apiVersion: v1
     appVersion: 0.5.0
-    created: "2024-10-12T14:24:45.057051888Z"
+    created: "2024-10-12T14:51:29.942750111Z"
     description: Qdrant-operator is an operator for Qdrant
     digest: 9d4c6a2e81a0f165c7387a944c691f69ee7cb8af8e79a410a90ac41f2917a57e
     home: https://github.com/Mokto/qdrant-operator
@@ -199,4 +217,4 @@ entries:
     urls:
     - https://mokto.github.io/qdrant-operator/qdrant-operator-0.2.0.tgz
     version: 0.2.0
-generated: "2024-10-12T14:24:45.056244871Z"
+generated: "2024-10-12T14:51:29.94198869Z"
