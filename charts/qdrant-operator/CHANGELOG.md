@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.11...qdrant-operator-v0.4.0) (2024-10-12)
+
+
+### Features
+
+* startup probes on ephemeral storages ([9f63842](https://github.com/Mokto/qdrant-operator/commit/9f63842a893e81a208080f8854a935b12ac66619))
+
 ## [0.3.11](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.3.10...qdrant-operator-v0.3.11) (2024-10-12)
 
 
