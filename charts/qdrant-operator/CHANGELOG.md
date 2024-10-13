@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.2...qdrant-operator-v0.5.3) (2024-10-13)
+
+
+### Bug Fixes
+
+* try to connect to the raft leader in priority ([8acad11](https://github.com/Mokto/qdrant-operator/commit/8acad11bca3b5841d905cc55e6b9c8d86dc6562c))
+
 ## [0.5.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.1...qdrant-operator-v0.5.2) (2024-10-13)
 
 
