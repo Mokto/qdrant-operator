@@ -40,7 +40,7 @@ const run = async () => {
         for (let i = 0; i < shard_number; i++) {
             const shardCount = shards.filter(s => s.shard_id === i).length;
             if (shardCount < replication_factor) {
-                console.log("Shard", i, "has not enough replicas");
+                console.log(collection, "Shard", i, shardCount, "/", replication_factor, "replicas");
                 process.exit(1);
             }
         }
