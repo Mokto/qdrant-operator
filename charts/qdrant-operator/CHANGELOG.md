@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.3...qdrant-operator-v0.5.4) (2024-10-14)
+
+
+### Bug Fixes
+
+* only move shards if you find a candidate for it ([7c57b2d](https://github.com/Mokto/qdrant-operator/commit/7c57b2d7882fdaa4d78197120e7f369dc970deb6))
+
 ## [0.5.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.2...qdrant-operator-v0.5.3) (2024-10-13)
 
 
