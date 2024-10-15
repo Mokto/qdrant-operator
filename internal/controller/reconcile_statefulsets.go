@@ -189,7 +189,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 					},
 					InitialDelaySeconds: 30,
 					PeriodSeconds:       5,
-					SuccessThreshold:    3,
+					SuccessThreshold:    1,
 					FailureThreshold:    10 * 3600,
 					TimeoutSeconds:      1,
 				},
