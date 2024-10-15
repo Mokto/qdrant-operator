@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.2...qdrant-operator-v0.6.3) (2024-10-15)
+
+
+### Bug Fixes
+
+* longer waiting period for the sidecar ([cb9b3d9](https://github.com/Mokto/qdrant-operator/commit/cb9b3d96758300f1193818eab164fb61718d1562))
+
 ## [0.6.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.1...qdrant-operator-v0.6.2) (2024-10-15)
 
 
