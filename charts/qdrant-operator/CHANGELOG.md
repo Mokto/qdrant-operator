@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.0...qdrant-operator-v0.6.1) (2024-10-15)
+
+
+### Bug Fixes
+
+* sidecar healthcheck was too strict ([9896e2d](https://github.com/Mokto/qdrant-operator/commit/9896e2d9a63890c301b0a744aa8422d4a09b9625))
+
 ## [0.6.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.4...qdrant-operator-v0.6.0) (2024-10-15)
 
 
