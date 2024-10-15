@@ -30,9 +30,9 @@ const run = async () => {
         const responseCollectionCluster = await baseInstance.get(`/collections/${collection}/cluster`);
 
         const shards = [...responseCollectionCluster.data.result.local_shards, ...responseCollectionCluster.data.result.remote_shards]
-        for (shard of shards) {
+        for (shard of responseCollectionCluster.data.result.local_shards) {
             if (shard.state !== "Active") {
-                console.log("Shard", shard.shard_id, "is not Active");
+                console.log("Shard", shard.shard_id, "is not active locally for collection", collection);
                 process.exit(1);
             }
         }

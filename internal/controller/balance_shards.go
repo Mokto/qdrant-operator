@@ -16,7 +16,7 @@ import (
 	"qdrantoperator.io/operator/internal/qdrant"
 )
 
-func (r *QdrantClusterReconciler) moveShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
+func (r *QdrantClusterReconciler) balanceShards(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) error {
 
 	if !obj.Status.Peers.AllReady() {
 		return nil

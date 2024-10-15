@@ -23,44 +23,53 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 					peerIdsWithShard = append(peerIdsWithShard, strconv.FormatUint(shard.PeerId, 10))
 				}
 
+				log.Info("Looking for the best peer to replicate the shard to...")
+
+				currentMinShardsCount := 100000
+				bestPeerId := ""
 				for peerId := range obj.Status.Peers {
 					if !slices.Contains(peerIdsWithShard, peerId) && obj.Status.Peers[peerId].IsReady {
-						log.Info(fmt.Sprintf("Replicating shard %d to %s", shardNumber, peerId))
-						hasDuplicatedShards = true
-						conn, err := grpc.NewClient(obj.Status.Peers[peerId].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
-						if err != nil {
-							log.Error(err, "grpc.NewClient")
-							return false, err
+						shardsOnThatPeer := len(collection.Shards[peerId])
+						if shardsOnThatPeer < currentMinShardsCount {
+							currentMinShardsCount = shardsOnThatPeer
+							bestPeerId = peerId
 						}
-						defer conn.Close()
-
-						fromPeerId, err := strconv.ParseUint(peerIdsWithShard[0], 10, 64)
-						if err != nil {
-							panic(err)
-						}
-						toPeerId, err := strconv.ParseUint(peerId, 10, 64)
-						if err != nil {
-							panic(err)
-						}
-
-						client := qdrant.NewCollectionsClient(conn)
-						_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
-							CollectionName: collectionName,
-							Operation: &qdrant.UpdateCollectionClusterSetupRequest_ReplicateShard{
-								ReplicateShard: &qdrant.ReplicateShard{
-									ShardId:    shardNumber,
-									FromPeerId: fromPeerId,
-									ToPeerId:   toPeerId,
-									Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
-								},
-							},
-						})
-						if err != nil {
-							log.Error(err, "unable to replicate shard")
-							return false, err
-						}
-						break
 					}
+				}
+
+				log.Info(fmt.Sprintf("Replicating shard %d to %s", shardNumber, bestPeerId))
+				hasDuplicatedShards = true
+				conn, err := grpc.NewClient(obj.Status.Peers[bestPeerId].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
+				if err != nil {
+					log.Error(err, "grpc.NewClient")
+					return false, err
+				}
+				defer conn.Close()
+
+				fromPeerId, err := strconv.ParseUint(peerIdsWithShard[0], 10, 64)
+				if err != nil {
+					panic(err)
+				}
+				toPeerId, err := strconv.ParseUint(bestPeerId, 10, 64)
+				if err != nil {
+					panic(err)
+				}
+
+				client := qdrant.NewCollectionsClient(conn)
+				_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+					CollectionName: collectionName,
+					Operation: &qdrant.UpdateCollectionClusterSetupRequest_ReplicateShard{
+						ReplicateShard: &qdrant.ReplicateShard{
+							ShardId:    shardNumber,
+							FromPeerId: fromPeerId,
+							ToPeerId:   toPeerId,
+							Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
+						},
+					},
+				})
+				if err != nil {
+					log.Error(err, "unable to replicate shard")
+					return false, err
 				}
 			}
 		}

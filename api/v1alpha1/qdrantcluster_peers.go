@@ -38,6 +38,16 @@ func (peers *Peers) AllNonEphemeralReady() bool {
 	}
 	return true
 }
+
+func (peers *Peers) HasNonEphemeralStorage() bool {
+	for _, peer := range *peers {
+		if !peer.EphemeralStorage {
+			return true
+		}
+	}
+	return false
+}
+
 func (peers *Peers) HasEphemeralStorage() bool {
 	for _, peer := range *peers {
 		if peer.EphemeralStorage {

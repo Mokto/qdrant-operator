@@ -170,6 +170,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 			containers = append(containers, v1core.Container{
 				Name:  "ready-container-check",
 				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.10.0",
+				// Image: "ghcr.io/mokto/qdrant-ready-container-check:0.11.0",
 				Command: []string{
 					"sleep",
 					"315000000", // 10 years

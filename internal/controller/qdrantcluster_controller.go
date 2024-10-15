@@ -134,7 +134,7 @@ func (r *QdrantClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return requeueResult, nil
 	}
 
-	err = r.moveShards(ctx, log, obj)
+	err = r.balanceShards(ctx, log, obj)
 	if err != nil {
 		log.Error(err, "unable to trigger moving shards")
 		return requeueResult, err
