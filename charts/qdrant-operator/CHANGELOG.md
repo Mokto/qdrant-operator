@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.1...qdrant-operator-v0.6.2) (2024-10-15)
+
+
+### Bug Fixes
+
+* all ephemeral storage ([866d7ed](https://github.com/Mokto/qdrant-operator/commit/866d7ed669ce65ecdb5bcae25f9d7ffbe34b1b13))
+
 ## [0.6.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.0...qdrant-operator-v0.6.1) (2024-10-15)
 
 
