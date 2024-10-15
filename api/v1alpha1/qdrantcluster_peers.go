@@ -39,13 +39,13 @@ func (peers *Peers) AllNonEphemeralReady() bool {
 	return true
 }
 
-func (peers *Peers) HasNonEphemeralStorage() bool {
+func (peers *Peers) IsAllEphemeralStorage() bool {
 	for _, peer := range *peers {
 		if !peer.EphemeralStorage {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (peers *Peers) HasEphemeralStorage() bool {

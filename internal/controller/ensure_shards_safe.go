@@ -11,7 +11,7 @@ import (
 
 // Makes sure that at least 1 shard is safe for each collection (not on ephemeral storage)
 func (r *QdrantClusterReconciler) ensureShardsSafe(ctx context.Context, log logr.Logger, obj *qdrantv1alpha1.QdrantCluster) (hasDoneAnything bool, err error) {
-	if obj.Status.Peers.HasNonEphemeralStorage() && (!obj.Status.Peers.HasEphemeralStorage() || !obj.Status.Peers.AllNonEphemeralReady()) {
+	if obj.Status.Peers.IsAllEphemeralStorage() && (!obj.Status.Peers.HasEphemeralStorage() || !obj.Status.Peers.AllNonEphemeralReady()) {
 		return
 	}
 
