@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.4...qdrant-operator-v0.6.0) (2024-10-15)
+
+
+### Features
+
+* replicate missing shards to best candidate ([5379ec6](https://github.com/Mokto/qdrant-operator/commit/5379ec60397f836ca8077aa4a99bbeecb932948c))
+
 ## [0.5.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.5.3...qdrant-operator-v0.5.4) (2024-10-14)
 
 
