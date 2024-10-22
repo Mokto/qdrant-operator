@@ -17,6 +17,7 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 	for collectionName, collection := range obj.Status.Collections {
 		for shardNumber := range collection.ShardNumber {
 			shardsFromId := collection.Shards.GetNonDeadShardsPerId(shardNumber)
+			allShardsFromId := collection.Shards.GetShardsPerId(shardNumber)
 			if len(shardsFromId) < int(collection.ReplicationFactor) {
 				peerIdsWithShard := []string{}
 				for _, shard := range shardsFromId {
@@ -71,6 +72,41 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 					log.Error(err, "unable to replicate shard")
 					return false, err
 				}
+			} else {
+				// if we have enough shards, let's kill the Dead ones
+				for _, shard := range allShardsFromId {
+					if shard.State == "Dead" {
+						log.Info("Shard is dead, deleting...")
+
+						peerId := strconv.FormatUint(shard.PeerId, 10)
+						if err != nil {
+							panic(err)
+						}
+						conn, err := grpc.NewClient(obj.Status.Peers[peerId].DNS+":6334", grpc.WithTransportCredentials(insecure.NewCredentials()))
+						if err != nil {
+							log.Error(err, "grpc.NewClient")
+							return false, err
+						}
+						defer conn.Close()
+
+						client := qdrant.NewCollectionsClient(conn)
+						_, err = client.UpdateCollectionClusterSetup(ctx, &qdrant.UpdateCollectionClusterSetupRequest{
+							CollectionName: collectionName,
+							Operation: &qdrant.UpdateCollectionClusterSetupRequest_DropReplica{
+								DropReplica: &qdrant.Replica{
+									ShardId: *shard.ShardId,
+									PeerId:  shard.PeerId,
+								},
+							},
+						})
+						if err != nil {
+							log.Error(err, "unable to drop dead shard")
+							return false, err
+						}
+						log.Info("Deleted dead shard...")
+					}
+				}
+
 			}
 		}
 	}
