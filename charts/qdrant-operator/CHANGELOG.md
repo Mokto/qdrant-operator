@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.7.0...qdrant-operator-v0.8.0) (2024-10-22)
+
+
+### Features
+
+* delete dead shards after copying is done ([fc3c978](https://github.com/Mokto/qdrant-operator/commit/fc3c978cd63e2bfde1095de97a870c35d43987e2))
+
 ## [0.7.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.4...qdrant-operator-v0.7.0) (2024-10-22)
 
 
