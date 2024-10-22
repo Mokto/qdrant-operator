@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.8.0...qdrant-operator-v0.9.0) (2024-10-22)
+
+
+### Features
+
+* new container ([49adb14](https://github.com/Mokto/qdrant-operator/commit/49adb14f15a6030de303be5789d59905a4dd335e))
+
 ## [0.8.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.7.0...qdrant-operator-v0.8.0) (2024-10-22)
 
 
