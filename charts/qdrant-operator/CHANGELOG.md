@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.4...qdrant-operator-v0.7.0) (2024-10-22)
+
+
+### Features
+
+* count a dead shard as missing ([931cdc1](https://github.com/Mokto/qdrant-operator/commit/931cdc193897ee5cbba37d9ee8b9d90fed1e8bde))
+
 ## [0.6.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.6.3...qdrant-operator-v0.6.4) (2024-10-15)
 
 
