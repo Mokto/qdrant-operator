@@ -38,9 +38,9 @@ const run = async () => {
         }
         // Loop through every shard number
         for (let i = 0; i < shard_number; i++) {
-            const shardCount = shards.filter(s => s.shard_id === i).length;
+            const shardCount = shards.filter(s => s.shard_id === i && s.state === "Active").length;
             if (shardCount < replication_factor) {
-                console.log(collection, "Shard", i, shardCount, "/", replication_factor, "replicas");
+                console.log("Collection", collection, " | Shard", i, "|", shardCount, "/", replication_factor, "replicas");
                 process.exit(1);
             }
         }
