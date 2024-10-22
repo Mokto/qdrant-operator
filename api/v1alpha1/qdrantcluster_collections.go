@@ -51,6 +51,17 @@ func (shardsPerPeer *ShardsPerPeer) GetShardsPerId(shardId uint32) ShardsList {
 	return shards
 }
 
+func (shardsPerPeer *ShardsPerPeer) GetNonDeadShardsPerId(shardId uint32) ShardsList {
+	shards := shardsPerPeer.GetShardsPerId(shardId)
+	result := ShardsList{}
+	for _, shard := range shards {
+		if shard.State != "Dead" {
+			result = append(result, shard)
+		}
+	}
+	return result
+}
+
 func (shardsList *ShardsList) HasShardFromPeer(peerId string) bool {
 	for _, shardInfo := range *shardsList {
 		if strconv.FormatUint(shardInfo.PeerId, 10) == peerId {
