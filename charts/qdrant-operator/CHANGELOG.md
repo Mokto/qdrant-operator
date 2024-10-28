@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.9.0...qdrant-operator-v0.10.0) (2024-10-28)
+
+
+### Features
+
+* snapshot to copy shards ([e5fd6ce](https://github.com/Mokto/qdrant-operator/commit/e5fd6cebe529d6fc8da1f60f73dff2e499432268))
+
 ## [0.9.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.8.0...qdrant-operator-v0.9.0) (2024-10-22)
 
 
