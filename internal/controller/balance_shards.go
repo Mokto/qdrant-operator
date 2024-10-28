@@ -157,7 +157,7 @@ func (r *QdrantClusterReconciler) moveShardSafely(ctx context.Context, log logr.
 						ShardId:    shardId,
 						FromPeerId: fromPeerIdUint,
 						ToPeerId:   toPeerIdUint,
-						Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
+						Method:     qdrant.ShardTransferMethod_Snapshot.Enum(),
 					},
 				},
 			})

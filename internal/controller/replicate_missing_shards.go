@@ -64,7 +64,7 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 							ShardId:    shardNumber,
 							FromPeerId: fromPeerId,
 							ToPeerId:   toPeerId,
-							Method:     qdrant.ShardTransferMethod_StreamRecords.Enum(),
+							Method:     qdrant.ShardTransferMethod_Snapshot.Enum(),
 						},
 					},
 				})
