@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.10.0...qdrant-operator-v0.11.0) (2024-10-28)
+
+
+### Features
+
+* allow overidding resources ([2ce72b0](https://github.com/Mokto/qdrant-operator/commit/2ce72b04d246fb711bdb24a7d3212fd2cf7e8128))
+
 ## [0.10.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.9.0...qdrant-operator-v0.10.0) (2024-10-28)
 
 
