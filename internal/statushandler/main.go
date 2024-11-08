@@ -86,12 +86,17 @@ func (s *StatusHandler) runCluster(cluster qdrantv1alpha1.QdrantCluster) {
 		// Getting peers from main service endpoint
 		peers := qdrantv1alpha1.Peers{}
 
+		currentPeerId := gjson.Get(bodyString, "result.peer_id").String()
+		currentPeerName := ""
 		leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
 		for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
 			serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
 			podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
 			dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
 			statefulsetName := strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-")
+			if peerId == currentPeerId {
+				currentPeerName = podName
+			}
 
 			resp, err := http.Get("http://" + dns + ":6333/readyz")
 			isReady := err == nil && resp.StatusCode == 200
@@ -115,7 +120,7 @@ func (s *StatusHandler) runCluster(cluster qdrantv1alpha1.QdrantCluster) {
 		}
 
 		if peers.GetLeader() == nil {
-			s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers on cluster %s", len(peers), cluster.Namespace))
+			s.log.Error(errors.New("leader not found on peer "+currentPeerId+" / "+currentPeerName), fmt.Sprintf("Leader not found amongst %d peers on cluster %s: %s / %s", len(peers), cluster.Namespace, currentPeerId, currentPeerName))
 			return
 		}
 		cluster.Status.Peers = peers
