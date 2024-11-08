@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.11.0...qdrant-operator-v0.12.0) (2024-11-08)
+
+
+### Features
+
+* run clusters independently for more stability ([7b45527](https://github.com/Mokto/qdrant-operator/commit/7b45527e17d7bb34c87a5f365e6872ad7f6212c1))
+
 ## [0.11.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.10.0...qdrant-operator-v0.11.0) (2024-10-28)
 
 
