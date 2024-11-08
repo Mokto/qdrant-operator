@@ -47,6 +47,7 @@ func (s *StatusHandler) Run() {
 	go s.checkForConsensusThreadStatus()
 
 	for {
+		time.Sleep(2 * time.Second)
 		// start := time.Now()
 		clusters := &qdrantv1alpha1.QdrantClusterList{}
 		err := s.manager.GetClient().List(s.ctx, clusters)
