@@ -9,6 +9,6 @@ keywords:
 name: qdrant-operator
 sources:
   - https://github.com/Mokto/qdrant-operator
-version: 0.12.0
+version: 0.13.0
 maintainers:
   - name: Mokto
