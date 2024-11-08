@@ -10,7 +10,7 @@ import (
 	qdrantv1alpha1 "qdrantoperator.io/operator/api/v1alpha1"
 )
 
-func (s *StatusHandler) checkForConsensusThreadStatus() {
+func (s *StatusHandler) getKubernetesClient() *kubernetes.Clientset {
 	config, err := rest.InClusterConfig()
 	if err != nil {
 		panic(err)
@@ -19,7 +19,18 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 	if err != nil {
 		panic(err)
 	}
+	return clientset
+}
 
+func (s *StatusHandler) DeletePod(namespace string, name string) {
+	clientset := s.getKubernetesClient()
+	err := clientset.CoreV1().Pods(namespace).Delete(s.ctx, name, v1.DeleteOptions{})
+	if err != nil {
+		s.log.Error(err, "unable to delete pod")
+	}
+}
+
+func (s *StatusHandler) checkForConsensusThreadStatus() {
 	for {
 		time.Sleep(30 * time.Second)
 
@@ -41,11 +52,7 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 					continue
 				}
 				if threadStatus == "stopped" {
-					err := clientset.CoreV1().Pods(cluster.Namespace).Delete(s.ctx, peer.PodName, v1.DeleteOptions{})
-					if err != nil {
-						s.log.Error(err, "unable to delete pod")
-						continue
-					}
+					s.DeletePod(cluster.Namespace, peer.PodName)
 					s.log.Info("Consensus thread stopped. Restarting the pod " + peer.PodName + ".")
 				}
 				if raftTerm == 0 && raftCommit == 0 {
@@ -57,11 +64,7 @@ func (s *StatusHandler) checkForConsensusThreadStatus() {
 						continue
 					}
 					if raftTerm == 0 && raftCommit == 0 {
-						err := clientset.CoreV1().Pods(cluster.Namespace).Delete(s.ctx, peer.PodName, v1.DeleteOptions{})
-						if err != nil {
-							s.log.Error(err, "unable to delete pod")
-							continue
-						}
+						s.DeletePod(cluster.Namespace, peer.PodName)
 						s.log.Info("raftTerm and raftCommit are 0 for peer " + peer.DNS + ". Restarting the pod " + peer.PodName + ".")
 					}
 				}

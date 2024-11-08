@@ -44,7 +44,7 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 func (s *StatusHandler) Run() {
 
 	go s.watchAndRemoveDeletedPeers()
-	go s.checkForConsensusThreadStatus()
+	// go s.checkForConsensusThreadStatus()
 
 	for {
 		time.Sleep(1500 * time.Millisecond)
@@ -88,6 +88,16 @@ func (s *StatusHandler) runCluster(cluster qdrantv1alpha1.QdrantCluster) {
 		peers := qdrantv1alpha1.Peers{}
 
 		currentPeerId := gjson.Get(bodyString, "result.peer_id").String()
+		consensus_thread_status := gjson.Get(bodyString, "result.consensus_thread_status.consensus_thread_status").String()
+		if consensus_thread_status == "stopped" {
+			for _, result := range gjson.Get(bodyString, "result.peers").Map() {
+				serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
+				podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
+				s.DeletePod(cluster.Namespace, podName)
+				s.log.Error(errors.New("consensus thread stopped. deleted pod"), fmt.Sprintf("Consensus thread stopped on cluster %s - peer %s - pod %s", cluster.Namespace, currentPeerId, podName))
+				return
+			}
+		}
 		currentPeerName := ""
 		leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
 		for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
