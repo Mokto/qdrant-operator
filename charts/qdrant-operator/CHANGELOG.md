@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.12.0...qdrant-operator-v0.13.0) (2024-11-08)
+
+
+### Features
+
+* log on which peer the leader hasn't been found ([8f9b618](https://github.com/Mokto/qdrant-operator/commit/8f9b6184567e46eb3c6fe9863cc7a86cb5f7b8ba))
+
 ## [0.12.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.11.0...qdrant-operator-v0.12.0) (2024-11-08)
 
 
