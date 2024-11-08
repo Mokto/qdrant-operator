@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.13.1...qdrant-operator-v0.14.0) (2024-11-08)
+
+
+### Features
+
+* deleting failed pods automatically ([7dfc198](https://github.com/Mokto/qdrant-operator/commit/7dfc19885f1d0f410acb344c1bcc17dbcf963d35))
+
 ## [0.13.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.13.0...qdrant-operator-v0.13.1) (2024-11-08)
 
 
