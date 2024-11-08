@@ -43,19 +43,10 @@ func NewStatusHandler(mngr manager.Manager) *StatusHandler {
 
 func (s *StatusHandler) Run() {
 
-	trueValue := true
-	falseValue := false
-
 	go s.watchAndRemoveDeletedPeers()
 	go s.checkForConsensusThreadStatus()
 
-	shouldSleep := true
 	for {
-		if shouldSleep {
-			time.Sleep(3 * time.Second)
-		}
-		shouldSleep = true
-
 		// start := time.Now()
 		clusters := &qdrantv1alpha1.QdrantClusterList{}
 		err := s.manager.GetClient().List(s.ctx, clusters)
@@ -64,133 +55,141 @@ func (s *StatusHandler) Run() {
 		}
 
 		for _, cluster := range clusters.Items {
-			ctx := context.Background()
-			if cluster.Spec.ApiKey != "" {
-				ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
-			}
-			patch := client.MergeFrom(cluster.DeepCopy())
-
-			cluster.Status.UnknownStatus = &falseValue
-			serviceName := cluster.GetServiceName()
-			bodyString, err := s.getClusterInfo(ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
-			if err != nil {
-				s.log.Error(err, "unable to get cluster info")
-				continue
-			}
-
-			// Getting peers from main service endpoint
-			peers := qdrantv1alpha1.Peers{}
-
-			leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
-			for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
-				serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
-				podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
-				dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
-				statefulsetName := strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-")
-
-				resp, err := http.Get("http://" + dns + ":6333/readyz")
-				isReady := err == nil && resp.StatusCode == 200
-
-				foundStatefulset := qdrantv1alpha1.StatefulSet{}
-				for _, statefulsetConfig := range cluster.Spec.Statefulsets {
-					if cluster.Name+"-"+statefulsetConfig.Name == statefulsetName {
-						foundStatefulset = statefulsetConfig
-						break
-					}
-				}
-
-				peers[peerId] = &qdrantv1alpha1.Peer{
-					IsLeader:         leaderId == peerId,
-					StatefulSetName:  statefulsetName,
-					PodName:          podName,
-					DNS:              dns,
-					IsReady:          isReady,
-					EphemeralStorage: foundStatefulset.EphemeralStorage,
-				}
-			}
-
-			if peers.GetLeader() == nil {
-				s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers on cluster %s", len(peers), cluster.Namespace))
-				continue
-			}
-			cluster.Status.Peers = peers
-			cluster.Status.HasBeenInited = &trueValue
-
-			hasDeletedPeers, err := s.clearDuplicatePeers(&cluster)
-			if err != nil {
-				s.log.Error(err, "unable to read response body")
-				continue
-			}
-			if hasDeletedPeers {
-				s.log.Info("Deleted duplicate peers")
-				shouldSleep = false
-				break
-			}
-
-			conn := s.getGrpcConnection(cluster.GetServiceName() + "." + cluster.Namespace + ":6334")
-			if conn == nil {
-				// error is already logged
-				continue
-			}
-			collectionsList, err := s.getCollections(ctx, conn)
-			if err != nil {
-				s.log.Error(err, "unable to get collections")
-				continue
-			}
-
-			collections := map[string]*qdrantv1alpha1.Collection{}
-			for _, collection := range collectionsList {
-				collections[collection] = &qdrantv1alpha1.Collection{}
-
-				shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
-				if err != nil {
-					cluster.Status.UnknownStatus = &trueValue
-					continue
-				}
-				collections[collection].Shards = shards
-
-				hasInProgressShards := false
-				for _, shardInProgress := range shardInProgress {
-					fmt.Println(shardInProgress)
-					peerIdTo := strconv.FormatUint(shardInProgress.To, 10)
-					peerIdFrom := strconv.FormatUint(shardInProgress.From, 10)
-					if cluster.Status.Peers[peerIdTo] == nil {
-						s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
-					} else if cluster.Status.Peers[peerIdFrom] == nil {
-						s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
-					} else {
-						hasInProgressShards = true
-					}
-				}
-				collections[collection].ShardsInProgress = hasInProgressShards
-
-				collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
-				if err != nil {
-					cluster.Status.UnknownStatus = &trueValue
-					continue
-				}
-				collections[collection].Status = collectionInfo.Status.String()
-				if collectionInfo.Config.Params.ReplicationFactor != nil {
-					collections[collection].ReplicationFactor = *collectionInfo.Config.Params.ReplicationFactor
-				} else {
-					collections[collection].ReplicationFactor = 1
-				}
-				collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
-
-			}
-
-			cluster.Status.Collections = collections
-
-			err = s.manager.GetClient().Status().Patch(s.ctx, &cluster, patch)
-			if err != nil {
-				s.log.Error(err, "unable to update QdrantCluster status")
-			}
-
+			// Run each cluster independently
+			s.runCluster(cluster)
 		}
 
 		// elapsed := time.Since(start)
 		// s.log.Info(fmt.Sprintf("Fetching cluster data took %s", elapsed))
 	}
+}
+
+func (s *StatusHandler) runCluster(cluster qdrantv1alpha1.QdrantCluster) {
+	defer func() {
+		falseValue := false
+		trueValue := true
+
+		ctx := context.Background()
+		if cluster.Spec.ApiKey != "" {
+			ctx = metadata.AppendToOutgoingContext(ctx, "api-key", cluster.Spec.ApiKey)
+		}
+		patch := client.MergeFrom(cluster.DeepCopy())
+
+		cluster.Status.UnknownStatus = &falseValue
+		serviceName := cluster.GetServiceName()
+		bodyString, err := s.getClusterInfo(ctx, serviceName+"."+cluster.Namespace, cluster.Spec.ApiKey)
+		if err != nil {
+			s.log.Error(err, "unable to get cluster info")
+			return
+		}
+
+		// Getting peers from main service endpoint
+		peers := qdrantv1alpha1.Peers{}
+
+		leaderId := gjson.Get(bodyString, "result.raft_info.leader").String()
+		for peerId, result := range gjson.Get(bodyString, "result.peers").Map() {
+			serviceName := strings.Replace(strings.Replace(result.Get("uri").String(), "http://", "", 1), ":6335/", "", 1)
+			podName := strings.Replace(strings.Replace(serviceName, "."+cluster.GetHeadlessServiceName(), "", 1), "."+cluster.GetNamespace(), "", 1)
+			dns := podName + "." + cluster.GetHeadlessServiceName() + "." + cluster.Namespace
+			statefulsetName := strings.Join(strings.Split(podName, "-")[:len(strings.Split(podName, "-"))-1], "-")
+
+			resp, err := http.Get("http://" + dns + ":6333/readyz")
+			isReady := err == nil && resp.StatusCode == 200
+
+			foundStatefulset := qdrantv1alpha1.StatefulSet{}
+			for _, statefulsetConfig := range cluster.Spec.Statefulsets {
+				if cluster.Name+"-"+statefulsetConfig.Name == statefulsetName {
+					foundStatefulset = statefulsetConfig
+					break
+				}
+			}
+
+			peers[peerId] = &qdrantv1alpha1.Peer{
+				IsLeader:         leaderId == peerId,
+				StatefulSetName:  statefulsetName,
+				PodName:          podName,
+				DNS:              dns,
+				IsReady:          isReady,
+				EphemeralStorage: foundStatefulset.EphemeralStorage,
+			}
+		}
+
+		if peers.GetLeader() == nil {
+			s.log.Error(errors.New("leader not found"), fmt.Sprintf("Leader not found amongst %d peers on cluster %s", len(peers), cluster.Namespace))
+			return
+		}
+		cluster.Status.Peers = peers
+		cluster.Status.HasBeenInited = &trueValue
+
+		hasDeletedPeers, err := s.clearDuplicatePeers(&cluster)
+		if err != nil {
+			s.log.Error(err, "unable to read response body")
+			return
+		}
+		if hasDeletedPeers {
+			s.log.Info("Deleted duplicate peers")
+			return
+		}
+
+		conn := s.getGrpcConnection(cluster.GetServiceName() + "." + cluster.Namespace + ":6334")
+		if conn == nil {
+			// error is already logged
+			return
+		}
+		collectionsList, err := s.getCollections(ctx, conn)
+		if err != nil {
+			s.log.Error(err, "unable to get collections")
+			return
+		}
+
+		collections := map[string]*qdrantv1alpha1.Collection{}
+		for _, collection := range collectionsList {
+			collections[collection] = &qdrantv1alpha1.Collection{}
+
+			shards, shardInProgress, err := s.getShardsInfo(ctx, conn, collection)
+			if err != nil {
+				cluster.Status.UnknownStatus = &trueValue
+				continue
+			}
+			collections[collection].Shards = shards
+
+			hasInProgressShards := false
+			for _, shardInProgress := range shardInProgress {
+				fmt.Println(shardInProgress)
+				peerIdTo := strconv.FormatUint(shardInProgress.To, 10)
+				peerIdFrom := strconv.FormatUint(shardInProgress.From, 10)
+				if cluster.Status.Peers[peerIdTo] == nil {
+					s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+				} else if cluster.Status.Peers[peerIdFrom] == nil {
+					s.abortShardTransfer(ctx, conn, collection, shardInProgress.From, shardInProgress.To, shardInProgress.ShardId)
+				} else {
+					hasInProgressShards = true
+				}
+			}
+			collections[collection].ShardsInProgress = hasInProgressShards
+
+			collectionInfo, err := s.getCollectionInfo(ctx, conn, collection)
+			if err != nil {
+				cluster.Status.UnknownStatus = &trueValue
+				continue
+			}
+			collections[collection].Status = collectionInfo.Status.String()
+			if collectionInfo.Config.Params.ReplicationFactor != nil {
+				collections[collection].ReplicationFactor = *collectionInfo.Config.Params.ReplicationFactor
+			} else {
+				collections[collection].ReplicationFactor = 1
+			}
+			collections[collection].ShardNumber = collectionInfo.Config.Params.ShardNumber
+
+		}
+
+		cluster.Status.Collections = collections
+
+		err = s.manager.GetClient().Status().Patch(s.ctx, &cluster, patch)
+		if err != nil {
+			s.log.Error(err, "unable to update QdrantCluster status")
+		}
+	}()
 }
 
 func (s *StatusHandler) getCollections(ctx context.Context, conn *grpc.ClientConn) ([]string, error) {
