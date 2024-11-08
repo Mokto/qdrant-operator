@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.13.0...qdrant-operator-v0.13.1) (2024-11-08)
+
+
+### Bug Fixes
+
+* sleep in the infinite loop ([4b332aa](https://github.com/Mokto/qdrant-operator/commit/4b332aae94602358250bc3ea68202421719d7b0b))
+
 ## [0.13.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.12.0...qdrant-operator-v0.13.0) (2024-11-08)
 
 
