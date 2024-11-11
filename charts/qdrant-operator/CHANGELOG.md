@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.14.0...qdrant-operator-v0.15.0) (2024-11-11)
+
+
+### Features
+
+* only copy active shards ([01566f2](https://github.com/Mokto/qdrant-operator/commit/01566f2e7c153eff29a98c4962f5b5502b2d9d2b))
+
 ## [0.14.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.13.1...qdrant-operator-v0.14.0) (2024-11-08)
 
 
