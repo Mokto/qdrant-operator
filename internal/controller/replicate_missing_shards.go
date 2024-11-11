@@ -21,7 +21,9 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 			if len(shardsFromId) < int(collection.ReplicationFactor) {
 				peerIdsWithShard := []string{}
 				for _, shard := range shardsFromId {
-					peerIdsWithShard = append(peerIdsWithShard, strconv.FormatUint(shard.PeerId, 10))
+					if shard.State == "Active" {
+						peerIdsWithShard = append(peerIdsWithShard, strconv.FormatUint(shard.PeerId, 10))
+					}
 				}
 
 				log.Info("Looking for the best peer to replicate the shard to...")
