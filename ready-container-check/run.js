@@ -29,7 +29,12 @@ const run = async () => {
 
         const responseCollectionCluster = await baseInstance.get(`/collections/${collection}/cluster`);
 
-        const shards = [...responseCollectionCluster.data.result.local_shards, ...responseCollectionCluster.data.result.remote_shards]
+        if (!responseCollectionCluster.data.result.local_shards.length) {
+            console.log("Collection", collection, "has no local shards yet");
+            process.exit(1);
+        }
+
+        // const shards = [...responseCollectionCluster.data.result.local_shards, ...responseCollectionCluster.data.result.remote_shards]
         for (shard of responseCollectionCluster.data.result.local_shards) {
             if (shard.state !== "Active") {
                 console.log("Shard", shard.shard_id, "is not active locally for collection", collection);
@@ -37,13 +42,13 @@ const run = async () => {
             }
         }
         // Loop through every shard number
-        for (let i = 0; i < shard_number; i++) {
-            const shardCount = shards.filter(s => s.shard_id === i && s.state === "Active").length;
-            if (shardCount < replication_factor) {
-                console.log("Collection", collection, " | Shard", i, "|", shardCount, "/", replication_factor, "replicas");
-                process.exit(1);
-            }
-        }
+        // for (let i = 0; i < shard_number; i++) {
+        //     const shardCount = shards.filter(s => s.shard_id === i && s.state === "Active").length;
+        //     if (shardCount < replication_factor) {
+        //         console.log("Collection", collection, " | Shard", i, "|", shardCount, "/", replication_factor, "replicas");
+        //         process.exit(1);
+        //     }
+        // }
     }
 }
 
