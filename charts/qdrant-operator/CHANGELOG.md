@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.15.0...qdrant-operator-v0.16.0) (2024-11-12)
+
+
+### Features
+
+* improve stability ([616f855](https://github.com/Mokto/qdrant-operator/commit/616f85581a8f4a0a920b3470164c018417e077ef))
+
 ## [0.15.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.14.0...qdrant-operator-v0.15.0) (2024-11-11)
 
 
