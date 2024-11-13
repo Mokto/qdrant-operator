@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.2...qdrant-operator-v0.16.3) (2024-11-13)
+
+
+### Bug Fixes
+
+* ready container ([debae2b](https://github.com/Mokto/qdrant-operator/commit/debae2bddb2f80fc104835b99c9f110ff09e4fa1))
+
 ## [0.16.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.1...qdrant-operator-v0.16.2) (2024-11-13)
 
 
