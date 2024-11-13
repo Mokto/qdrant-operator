@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.0...qdrant-operator-v0.16.1) (2024-11-13)
+
+
+### Bug Fixes
+
+* ready container for collections with small amount of shards ([4a6f2f3](https://github.com/Mokto/qdrant-operator/commit/4a6f2f348855450eb1bd70f1074ca7a741bb22c8))
+
 ## [0.16.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.15.0...qdrant-operator-v0.16.0) (2024-11-12)
 
 
