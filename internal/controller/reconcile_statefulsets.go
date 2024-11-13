@@ -169,7 +169,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 		if statefulSetConfig.EphemeralStorage {
 			containers = append(containers, v1core.Container{
 				Name:  "ready-container-check",
-				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.16.0",
+				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.17.0",
 				Command: []string{
 					"bun",
 					"sleep.js",

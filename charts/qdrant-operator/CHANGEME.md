@@ -1,2 +1,2 @@
 Right now release please doesn't watch other folders.
-33
+34
