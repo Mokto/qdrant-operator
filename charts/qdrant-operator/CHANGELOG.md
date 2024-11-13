@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.3...qdrant-operator-v0.16.4) (2024-11-13)
+
+
+### Bug Fixes
+
+* wip ([b19dc37](https://github.com/Mokto/qdrant-operator/commit/b19dc37c4c83c5994c531244b97dbc595ef21f1f))
+
 ## [0.16.3](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.2...qdrant-operator-v0.16.3) (2024-11-13)
 
 
