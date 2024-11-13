@@ -12,6 +12,7 @@ const baseInstance = axios.create({
 const run = async () => {
     const responseCluster = await baseInstance.get('/cluster')
     const currentPeerId = responseCluster.data.result.peer_id;
+    const countPeers = Object.keys(responseCluster.data.result.peers).length;
 
     const responseCollections = await baseInstance.get('/collections')
     const collections = responseCollections.data.result.collections.map(c => c.name);
@@ -27,9 +28,11 @@ const run = async () => {
         const replication_factor = responseCollection.data.result.config.params.replication_factor;
         const shard_number = responseCollection.data.result.config.params.shard_number;
 
+        const shouldBeAssignedShards = replication_factor * shard_number;
+
         const responseCollectionCluster = await baseInstance.get(`/collections/${collection}/cluster`);
 
-        if (!responseCollectionCluster.data.result.local_shards.length) {
+        if (shouldBeAssignedShards > countPeers && !responseCollectionCluster.data.result.local_shards.length) {
             console.log("Collection", collection, "has no local shards yet");
             process.exit(1);
         }
