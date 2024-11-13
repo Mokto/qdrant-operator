@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.1...qdrant-operator-v0.16.2) (2024-11-13)
+
+
+### Bug Fixes
+
+* better waiting system ([e0b7844](https://github.com/Mokto/qdrant-operator/commit/e0b784432bce8e85da0fa41a9d777a6b287e7b54))
+
 ## [0.16.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.0...qdrant-operator-v0.16.1) (2024-11-13)
 
 
