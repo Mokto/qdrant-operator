@@ -172,7 +172,7 @@ func (r *QdrantClusterReconciler) reconcileStatefulsets(ctx context.Context, log
 				Image: "ghcr.io/mokto/qdrant-ready-container-check:0.16.0",
 				Command: []string{
 					"bun",
-					"run.js",
+					"sleep.js",
 				},
 				Env: []v1core.EnvVar{{
 					Name:  "API_KEY",
