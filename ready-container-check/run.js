@@ -1,5 +1,5 @@
 const axios = require('axios');
-
+const fs = require('fs');
 
 const baseInstance = axios.create({
     baseURL: 'http://localhost:6333',
@@ -10,6 +10,9 @@ const baseInstance = axios.create({
 });
 
 const run = async () => {
+
+    const hasBeen5Min = fs.existsSync('./5min');
+
     const responseCluster = await baseInstance.get('/cluster')
     const currentPeerId = responseCluster.data.result.peer_id;
     const countPeers = Object.keys(responseCluster.data.result.peers).length;
@@ -32,7 +35,7 @@ const run = async () => {
 
         const responseCollectionCluster = await baseInstance.get(`/collections/${collection}/cluster`);
 
-        if (shouldBeAssignedShards > countPeers && !responseCollectionCluster.data.result.local_shards.length) {
+        if (!hasBeen5Min && shouldBeAssignedShards > countPeers && !responseCollectionCluster.data.result.local_shards.length) {
             console.log("Collection", collection, "has no local shards yet");
             process.exit(1);
         }
