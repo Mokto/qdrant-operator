@@ -71,8 +71,7 @@ func (r *QdrantClusterReconciler) replicateMissingShards(ctx context.Context, lo
 					},
 				})
 				if err != nil {
-					log.Error(err, "unable to replicate shard")
-					return false, err
+					fmt.Println(err, "unable to replicate shard")
 				}
 			} else {
 				// if we have enough shards, let's kill the Dead ones
