@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.4...qdrant-operator-v0.17.0) (2024-12-02)
+
+
+### Features
+
+* replicate shards faster ([f3626bc](https://github.com/Mokto/qdrant-operator/commit/f3626bc85fe01e8effd11389c970944ce7bacdc1))
+
 ## [0.16.4](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.3...qdrant-operator-v0.16.4) (2024-11-13)
 
 
