@@ -31,6 +31,10 @@ func (s *StatusHandler) watchAndRemoveDeletedPeers() {
 	for event := range watcher.ResultChan() {
 		item := event.Object.(*corev1.Pod)
 
+		if item.Labels["qdrant-ephemeral-storage"] != "true" {
+			continue
+		}
+
 		switch event.Type {
 		case watch.Modified:
 			if item.ObjectMeta.DeletionTimestamp != nil {
