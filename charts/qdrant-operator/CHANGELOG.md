@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.17.0...qdrant-operator-v0.17.1) (2024-12-05)
+
+
+### Bug Fixes
+
+* deleting non ephemereal ([8380ae9](https://github.com/Mokto/qdrant-operator/commit/8380ae921611e3bf381d5ef55caab17d15f7b9a7))
+
 ## [0.17.0](https://github.com/Mokto/qdrant-operator/compare/qdrant-operator-v0.16.4...qdrant-operator-v0.17.0) (2024-12-02)
 
 
